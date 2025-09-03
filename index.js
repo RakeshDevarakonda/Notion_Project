@@ -7,12 +7,10 @@ import authRouter from "./src/RestApi/routes/authroutes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
 import tenantRouter from "./src/RestApi/routes/tenantRoutes.js";
 
-// import { ApolloServer } from "apollo-server-express";
-// import { typeDefs } from "./src/graphql/schemas/authschema.js";
-// import { context } from "./src/middleware/authmiddleware.js";
-// import { formatError } from "./src/middleware/errorformat.js";
-// import { resolvers } from "./src/graphql/resolvers/index.js";
-// import { Database } from "./src/models/Database.js";
+import { ApolloServer } from "apollo-server-express";
+import { resolvers } from "./src/graphql/resolvers/index.js";
+import { typeDefs } from './src/graphql/schemas/index.js';
+
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -25,27 +23,24 @@ app.use(express.json());
 
 app.get("/", (req, res) => res.send("Notion Running"));
 
-app.use("/api/auth",authRouter)
+app.use("/api/auth", authRouter);
 
-app.use("/api/tenant",tenantRouter)
+app.use("/api/tenant", tenantRouter);
 
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
 
-// const server = new ApolloServer({
-//   typeDefs,
-//   resolvers,
-//   context,
-//   formatError,
-// });
+await server.start();
 
-// await server.start();
+server.applyMiddleware({ app, path: "/graphql" });
 
-// server.applyMiddleware({ app, path: "/graphql" });
-
-app.use(errorHandler)
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  // console.log(
-  // `🚀 GraphQL endpoint available at http://localhost:${PORT}/graphql`
-  // );
+  console.log(
+    `🚀 GraphQL endpoint available at http://localhost:${PORT}/graphql`
+  );
 });

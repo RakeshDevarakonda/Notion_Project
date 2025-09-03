@@ -1,144 +1,132 @@
-
 {
-  "_id": "64f3a2b1e1a9c4f7a9999999",
-  "name": "Tasks",
-  "type": "table",
-  "fields": [
+  "_id": "64ff0000abcd5678ef900999",
+  "databaseId": "64fe2000abcd5678ef902000",
+  "tenantId": "64fe0000abcd5678ef900001",
+  "values": [
     {
-      "_id": "64f3a2b1e1a9c4f7a1000001",
-      "name": "Title",
-      "type": "text",
-      "options": []
-    },
-    {
-      "_id": "64f3a2b1e1a9c4f7a1000002",
-      "name": "Priority",
-      "type": "select",
-      "options": ["Low", "Medium", "High"]
-    },
-    {
-      "_id": "64f3a2b1e1a9c4f7a1000003",
-      "name": "Due Date",
-      "type": "date",
-      "options": []
-    }
-  ],
-  "entries": [
-    {
-      "_id": "64f3a2b1e1a9c4f7a2000001",
-      "values": [
-        { "fieldId": "64f3a2b1e1a9c4f7a1000001", "value": "Finish schema design" },
-        { "fieldId": "64f3a2b1e1a9c4f7a1000002", "value": "High" },
-        { "fieldId": "64f3a2b1e1a9c4f7a1000003", "value": "2025-09-05" }
+      "rowId": "64ff1000abcd5678ef901001",
+      "rowNumber": 1,
+      "data": [
+        {
+          "field": {
+            "fieldId": "64fe1111abcd5678ef900111",
+            "fieldName": "Project Name",
+            "fieldType": "text"
+          },
+          "value": {
+            "valueId": "64ff2000abcd5678ef902001",
+            "value": "Website Redesign"
+          }
+        },
+        {
+          "field": {
+            "fieldId": "64fe1112abcd5678ef900112",
+            "fieldName": "Start Date",
+            "fieldType": "date"
+          },
+          "value": {
+            "valueId": "64ff2001abcd5678ef902002",
+            "value": "2025-09-01"
+          }
+        },
+        {
+          "field": {
+            "fieldId": "64fe1113abcd5678ef900113",
+            "fieldName": "Budget",
+            "fieldType": "number"
+          },
+          "value": {
+            "valueId": "64ff2002abcd5678ef902003",
+            "value": 15000
+          }
+        }
       ]
     },
     {
-      "_id": "64f3a2b1e1a9c4f7a2000002",
-      "values": [
-        { "fieldId": "64f3a2b1e1a9c4f7a1000001", "value": "Review project" },
-        { "fieldId": "64f3a2b1e1a9c4f7a1000002", "value": "Medium" },
-        { "fieldId": "64f3a2b1e1a9c4f7a1000003", "value": "2025-09-10" }
+      "rowId": "64ff1001abcd5678ef901002",
+      "rowNumber": 2,
+      "data": [
+        {
+          "field": {
+            "fieldId": "64fe1111abcd5678ef900111",
+            "fieldName": "Project Name",
+            "fieldType": "text"
+          },
+          "value": {
+            "valueId": "64ff2003abcd5678ef902004",
+            "value": "Mobile App Development"
+          }
+        },
+        {
+          "field": {
+            "fieldId": "64fe1112abcd5678ef900112",
+            "fieldName": "Start Date",
+            "fieldType": "date"
+          },
+          "value": {
+            "valueId": "64ff2004abcd5678ef902005",
+            "value": "2025-09-05"
+          }
+        },
+        {
+          "field": {
+            "fieldId": "64fe1113abcd5678ef900113",
+            "fieldName": "Budget",
+            "fieldType": "number"
+          },
+          "value": {
+            "valueId": "64ff2005abcd5678ef902006",
+            "value": 25000
+          }
+        }
       ]
     }
   ],
-  "createdAt": "2025-09-02T10:15:00.000Z",
-  "updatedAt": "2025-09-02T10:15:00.000Z"
+  "orderIndex": 0,
+  "createdAt": "2025-09-03T17:00:00.000Z",
+  "updatedAt": "2025-09-03T17:00:00.000Z"
 }
 
 
 
-// const fieldSchema = new mongoose.Schema({
-//   name: { type: String, required: true },
-//   type: { type: String, required: true },
-//   options: [String],
-//   value: { type: mongoose.Schema.Types.Mixed, default: null },
-// });
-
-// const databaseSchema = new mongoose.Schema(
-//   {
-//     tenantId: {
-//       type: mongoose.Schema.Types.ObjectId,
-//       ref: "Tenant",
-//       required: true,
-//     },
-//     name: { type: String, required: true },
-//     fields: [fieldSchema],
-//     createdBy: {
-//       type: mongoose.Schema.Types.ObjectId,
-//       ref: "User",
-//       required: true,
-//     },
-//   },
-//   { timestamps: true }
-// );
-
-// export default mongoose.model("Database", databaseSchema);
 
 
 
 
 
 
-db.databases.aggregate([
-  { $match: { _id: ObjectId("68b6ad9f800d066b4474386c") } },
-  { $project: { dbId: "$_id", dbName: "$name", entries: 1 } },
-  { $unwind: "$entries" },
-  {
-    $lookup: {
-      from: "entries",
-      localField: "entries.entryId",
-      foreignField: "_id",
-      as: "entryDetails"
-    }
-  },
-  { $unwind: "$entryDetails" },
-  { $unwind: "$entryDetails.values" },
-  {
-    $lookup: {
-      from: "fields",
-      localField: "entryDetails.values.fieldId",
-      foreignField: "_id",
-      as: "fieldDetails"
-    }
-  },
-  { $unwind: "$fieldDetails" },
-  {
-    $project: {
-      dbId: 1,
-      dbName: 1,
-      rowId: "$entries.rowId",
-      entryId: "$entryDetails._id",
-      field: {
-        _id: "$fieldDetails._id",
-        name: "$fieldDetails.name",
-        type: "$fieldDetails.type",
-        options: "$fieldDetails.options"
+mutation {
+  createDatabaseWithRows(input: {
+    tenantId: "64fe0000abcd5678ef900001",
+    name: "Projects Database",
+    rows: [
+      {
+        rowNumber: 1,
+        fields: [
+          { fieldName: "Project Name", fieldType: "text", value: "Website Redesign" },
+          { fieldName: "Start Date", fieldType: "date", value: "2025-09-01" },
+          { fieldName: "Budget", fieldType: "number", value: "15000" }
+        ]
       },
-      value: "$entryDetails.values.value",
-      entryCreatedAt: "$entryDetails.createdAt",
-      entryUpdatedAt: "$entryDetails.updatedAt"
-    }
-  },
-  {
-    $group: {
-      _id: { rowId: "$rowId", entryId: "$entryId", dbId: "$dbId", dbName: "$dbName" },
-      entryCreatedAt: { $first: "$entryCreatedAt" },
-      entryUpdatedAt: { $first: "$entryUpdatedAt" },
-      values: { $push: { field: "$field", value: "$value" } }
-    }
-  },
-  {
-    $group: {
-      _id: { dbId: "$_id.dbId", dbName: "$_id.dbName" },
-      rows: { $push: { k: { $toString: "$_id.rowId" }, v: "$values" } }
-    }
-  },
-  {
-    $project: {
-      _id: 0,
-      dbId: "$_id.dbId",
-      dbName: "$_id.dbName",
-      rows: { $arrayToObject: "$rows" }
+      {
+        rowNumber: 2,
+        fields: [
+          { fieldName: "Project Name", fieldType: "text", value: "Mobile App Development" },
+          { fieldName: "Start Date", fieldType: "date", value: "2025-09-05" },
+          { fieldName: "Budget", fieldType: "number", value: "25000" }
+        ]
+      }
+    ]
+  }) {
+    _id
+    name
+    rows {
+      rowNumber
+      data {
+        fieldName
+        fieldType
+        value
+      }
     }
   }
-]).pretty();
+}

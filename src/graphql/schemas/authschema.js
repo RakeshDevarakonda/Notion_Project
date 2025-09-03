@@ -1,15 +1,15 @@
-export const typeDefs = `#graphql
-  type Tenant {
-    id: ID!
-    name: String!
-  }
-
+export const authdefschema = `#graphql
   type User {
     id: ID!
     name: String!
     email: String!
-    role: String!
-    tenant: Tenant
+    invites: [Invite!]!
+  }
+
+  type Invite {
+    tenantId: ID!
+    email: String!
+    status: String!
   }
 
   type AuthPayload {
@@ -18,7 +18,7 @@ export const typeDefs = `#graphql
   }
 
   type Query {
-        mydetails(id: ID!): User
+    mydetails(id: ID!): User
   }
 
   type Mutation {
@@ -26,11 +26,11 @@ export const typeDefs = `#graphql
       name: String!
       email: String!
       password: String!
-    ): AuthPayload
+    ): AuthPayload!
 
     login(
       email: String!
       password: String!
-    ): AuthPayload
+    ): AuthPayload!
   }
 `;

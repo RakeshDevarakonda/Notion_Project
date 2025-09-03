@@ -1,4 +1,6 @@
-import authschema from "./authschema.js";
+// import authschema from "./authschema.js";
+
+import { createDatabaseSchema } from "./databaseSchema.js";
 
 
-export const typeDefs = [authschema];
+export const typeDefs = [createDatabaseSchema];

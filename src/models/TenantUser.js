@@ -24,10 +24,6 @@ const tenantUserSchema = new mongoose.Schema(
             default: "Pending",
             required: true,
           },
-          // isActive: {
-          //   type: Boolean,
-          //   default: true,
-          // },
         },
       ],
       default: [],

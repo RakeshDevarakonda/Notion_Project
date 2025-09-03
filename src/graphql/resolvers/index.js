@@ -1,4 +1,5 @@
 import { authresolvers } from "./authresolver.js";
+import { databaseResolver } from "./DatabaseResolver.js";
 
 
 export const resolvers = {
@@ -7,7 +8,7 @@ export const resolvers = {
 
   },
   Mutation: {
-    ...authresolvers.Mutation,
+    ...databaseResolver.Mutation,
 
   },
 };

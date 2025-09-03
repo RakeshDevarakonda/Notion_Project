@@ -1,95 +1,90 @@
-import mongoose from "mongoose";
+
+import  mongoose  from 'mongoose';
 
 
 const fieldSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+    },
+    databaseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Database",
+      required: true,
+    },
     name: { type: String, required: true },
-    type: { type: String, required: true },
-    options: [String],
-    databaseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Database",
-      required: true,
-    },
-    tenant: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant" },
-  },
-  { timestamps: true }
-);
-
-
-
-const entrySchema = new mongoose.Schema(
-  {
-    values: [
-      {
-        fieldId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Field",
-          required: true,
-        },
-        value: mongoose.Schema.Types.Mixed,
-      },
-    ],
-    databaseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Database",
-      required: true,
-    },
-    tenant: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant" },
-  },
-  { timestamps: true }
-);
-
-const rowSchema = new mongoose.Schema(
-  {
-    databaseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Database",
-      required: true,
-    },
-    tenant: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant" },
-    entryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Entry",
-      required: true,
-    },
-    rowName: {
+    type: {
       type: String,
+      enum: ["text", "number", "date", "boolean", "select"],
       required: true,
     },
+    options: [{ label: String, value: String }],
   },
   { timestamps: true }
 );
 
 const databaseSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+    },
     name: { type: String, required: true },
-    fields: [{ type: mongoose.Schema.Types.ObjectId, ref: "Field" }],
-    tenant: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant" },
-    entries: [
+    fields: [
       {
-        entryId: {
+        fieldId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Entry",
-          required: true,
-        },
-        rowId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Row",
+          ref: "Field",
           required: true,
         },
       },
     ],
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
   },
   { timestamps: true }
 );
 
-export const Database = mongoose.model("Database", databaseSchema);
+const recordSchema = new mongoose.Schema(
+  {
+    databaseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Database",
+      required: true,
+    },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+    },
+    values: [
+      {
+        rowId: { type: mongoose.Schema.Types.ObjectId, auto: true },
+        rowNumber: { type: Number, required: true },
+        data: [
+          {
+            field: {
+              fieldId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Field",
+                required: true,
+              },
+              fieldName: { type: String, required: true },
+              fieldType: { type: String, required: true },
+            },
+            value: {
+              valueId: { type: mongoose.Schema.Types.ObjectId, auto: true },
+              value: mongoose.Schema.Types.Mixed,
+            },
+          },
+        ],
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
 export const Field = mongoose.model("Field", fieldSchema);
-export const Entry = mongoose.model("Entry", entrySchema);
-export const Row = mongoose.model("Row", rowSchema);
+export const Database = mongoose.model("Database", databaseSchema);
+export const Record = mongoose.model("Record", recordSchema);
