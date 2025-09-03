@@ -1,75 +1,68 @@
-{
-  "_id": { "$oid": "654abcd1234567890abcdef01" },
-  "databaseId": { "$oid": "654abcd1234567890abcdef02" },
-  "title": "User Contacts",
-  "fields": [
-    {
-      "fieldId": { "$oid": "654abcd1234567890abcdef11" },
-      "name": "Username",
-      "type": "text",
-      "options": [],
-      "relation": null
-    },
-    {
-      "fieldId": { "$oid": "654abcd1234567890abcdef12" },
-      "name": "Email",
-      "type": "text",
-      "options": [],
-      "relation": null
-    },
-    {
-      "fieldId": { "$oid": "654abcd1234567890abcdef13" },
-      "name": "Age",
-      "type": "number",
-      "options": [],
-      "relation": null
-    },
-    {
-      "fieldId": { "$oid": "654abcd1234567890abcdef14" },
-      "name": "Role",
-      "type": "select",
-      "options": ["Admin", "User", "Guest"],
-      "relation": null
-    }
-  ],
-  "createdTime": { "$date": "2025-09-03T19:30:00Z" },
-  "lastEditedTime": { "$date": "2025-09-03T19:35:00Z" }
-}
-and row is
-
-
-
-
-
-
-
-
-
 [
   {
-    "_id": { "$oid": "654abcd1234567890abcdef21" },
-    "rowId": { "$oid": "654abcd1234567890abcdef22" },
-    "databaseId": { "$oid": "654abcd1234567890abcdef02" },
-    "values": [
-      { "fieldId": { "$oid": "654abcd1234567890abcdef11" }, "fieldName": "Username", "value": "Alice Johnson" },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef12" }, "fieldName": "Email", "value": "alice.johnson@example.com" },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef13" }, "fieldName": "Age", "value": 28 },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef14" }, "fieldName": "Role", "value": "Admin" }
-    ],
-    "createdTime": { "$date": "2025-09-03T19:31:00Z" },
-    "lastEditedTime": { "$date": "2025-09-03T19:32:00Z" }
+    "_id": "64fa001234567890abcdef01",
+    "name": "Username",
+    "type": "text",
+    "options": [],
+    "relation": null,
+    "createdTime": "2025-09-03T19:30:00Z",
+    "lastEditedTime": "2025-09-03T19:30:00Z"
   },
   {
-    "_id": { "$oid": "654abcd1234567890abcdef23" },
-    "rowId": { "$oid": "654abcd1234567890abcdef24" },
-    "databaseId": { "$oid": "654abcd1234567890abcdef02" },
-    "values": [
-      { "fieldId": { "$oid": "654abcd1234567890abcdef11" }, "fieldName": "Username", "value": "Bob Smith" },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef12" }, "fieldName": "Email", "value": "bob.smith@example.com" },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef13" }, "fieldName": "Age", "value": 34 },
-      { "fieldId": { "$oid": "654abcd1234567890abcdef14" }, "fieldName": "Role", "value": "User" }
+    "_id": "64fa001234567890abcdef02",
+    "name": "Email",
+    "type": "text",
+    "options": [],
+    "relation": null,
+    "createdTime": "2025-09-03T19:30:00Z",
+    "lastEditedTime": "2025-09-03T19:30:00Z"
+  },
+  {
+    "_id": "64fa001234567890abcdef03",
+    "name": "Age",
+    "type": "number",
+    "options": [],
+    "relation": null,
+    "createdTime": "2025-09-03T19:30:00Z",
+    "lastEditedTime": "2025-09-03T19:30:00Z"
+  }
+]
+[
+  {
+    "_id": "64fa00a234567890abcdef10",
+    "title": "User Contacts",
+    "fields": [
+      "64fa001234567890abcdef01",
+      "64fa001234567890abcdef02",
+      "64fa001234567890abcdef03"
     ],
-    "createdTime": { "$date": "2025-09-03T19:33:00Z" },
-    "lastEditedTime": { "$date": "2025-09-03T19:34:00Z" }
+    "createdTime": "2025-09-03T19:31:00Z",
+    "lastEditedTime": "2025-09-03T19:31:00Z"
+  }
+]
+[
+  {
+    "_id": "64fa00b234567890abcdef20",
+    "rowId": "64fa00b234567890abcdef20",
+    "databaseId": "64fa00a234567890abcdef10",
+    "values": [
+      { "fieldId": "64fa001234567890abcdef01", "value": "Alice Johnson" },
+      { "fieldId": "64fa001234567890abcdef02", "value": "alice.johnson@example.com" },
+      { "fieldId": "64fa001234567890abcdef03", "value": 28 }
+    ],
+    "createdTime": "2025-09-03T19:32:00Z",
+    "lastEditedTime": "2025-09-03T19:33:00Z"
+  },
+  {
+    "_id": "64fa00b234567890abcdef21",
+    "rowId": "64fa00b234567890abcdef21",
+    "databaseId": "64fa00a234567890abcdef10",
+    "values": [
+      { "fieldId": "64fa001234567890abcdef01", "value": "Bob Smith" },
+      { "fieldId": "64fa001234567890abcdef02", "value": "bob.smith@example.com" },
+      { "fieldId": "64fa001234567890abcdef03", "value": 34 }
+    ],
+    "createdTime": "2025-09-03T19:33:00Z",
+    "lastEditedTime": "2025-09-03T19:34:00Z"
   }
 ]

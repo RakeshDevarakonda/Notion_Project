@@ -1,52 +1,64 @@
 import mongoose from "mongoose";
 
 /** -----------------------------
- * Field / Column Schema
+ * Field / Column Model
  * ----------------------------- */
 const fieldSchema = new mongoose.Schema({
-  fieldId: { type: mongoose.Schema.Types.ObjectId, auto: true }, // auto-generated
-  name: { type: String, required: true },                         // display name
+  name: { type: String, required: true },  // display name
   type: { 
     type: String, 
     required: true,
     enum: ["text", "number", "date", "boolean", "select", "multi-select", "relation"]
   },
   options: { type: [String], default: [] },                        // for select / multi-select
-  relation: { type: mongoose.Schema.Types.ObjectId, default: null }, // references another database
-}, { _id: false });
-
-/** -----------------------------
- * Database Schema
- * ----------------------------- */
-const databaseSchema = new mongoose.Schema({
-  databaseId: { type: mongoose.Schema.Types.ObjectId, auto: true },
-  title: { type: String, required: true },
-  fields: { type: [fieldSchema], default: [] },                  // column definitions
+  relation: { type: mongoose.Schema.Types.ObjectId, default: null }, // optional reference to another database
   createdTime: { type: Date, default: Date.now },
   lastEditedTime: { type: Date, default: Date.now },
 });
+
+const Field = mongoose.model("Field", fieldSchema);
+
+
+/** -----------------------------
+ * Database Model
+ * ----------------------------- */
+const databaseSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  fields: [{ type: mongoose.Schema.Types.ObjectId, ref: "Field" }], // array of Field references
+  createdTime: { type: Date, default: Date.now },
+  lastEditedTime: { type: Date, default: Date.now },
+});
+
+const Database = mongoose.model("Database", databaseSchema);
+
+
 /** -----------------------------
  * Row Value Schema
  * ----------------------------- */
 const rowValueSchema = new mongoose.Schema({
-  fieldId: { type: mongoose.Schema.Types.ObjectId, required: true },  // reference to Database.fields
-  fieldName: { type: String, required: true },                        // optional denormalized field name
-  value: { type: mongoose.Schema.Types.Mixed },                        // actual value
+  fieldId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Field" },
+  value: { type: mongoose.Schema.Types.Mixed },  // can store text, number, date, boolean, etc.
 }, { _id: false });
 
+
 /** -----------------------------
- * Row Schema
+ * Row Model
  * ----------------------------- */
 const rowSchema = new mongoose.Schema({
   rowId: { type: mongoose.Schema.Types.ObjectId, auto: true },
   databaseId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Database" },
-  values: { type: [rowValueSchema], default: [] },
+  values: { type: [rowValueSchema], default: [] }, // array of { fieldId, value }
   createdTime: { type: Date, default: Date.now },
   lastEditedTime: { type: Date, default: Date.now },
 });
 
+// Index to speed up queries by database
+rowSchema.index({ databaseId: 1 });
 
 const Row = mongoose.model("Row", rowSchema);
 
 
-const Database = mongoose.model("Database", databaseSchema);
+/** -----------------------------
+ * Export Models
+ * ----------------------------- */
+export { Field, Database, Row };
