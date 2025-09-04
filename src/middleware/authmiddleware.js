@@ -25,3 +25,27 @@ export const isAuthenticated = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized, token invalid" });
   }
 };
+
+export const context = async ({ req }) => {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace("Bearer ", "");
+
+  if (!token) {
+    return { user: null };
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await TenantUser.findById(decoded.id);
+
+    if (!user) {
+      return { user: null };
+    }
+
+    return { user };
+  } catch (err) {
+    console.warn("JWT Error:", err.message);
+    return { user: null };
+  }
+};

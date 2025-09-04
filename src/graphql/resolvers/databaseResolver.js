@@ -1,45 +1,35 @@
-import { Database } from "../../models/Database.js";
+import GraphQLJSON from "graphql-type-json";
+import { throwUserInputError } from "../../utils/throwError.js";
+import { createDBWithRow, deleteDatabasesByIds } from "../services/mutations/databasemutationService.js";
+import { getDatabaseDetails } from '../services/queries/databaseQueryServices.js';
+
 
 export const databaseResolver = {
-  mydetails: async (_) => {
-    return {
-      name: "John Doe",
-      email: "john@example.com",
-    };
+  JSON: GraphQLJSON,
+
+  Query: {
+    getDatabaseData: async (_, { TenantId, databaseId }, context) => {
+      if (!context.user) throwUserInputError("Authentication required");
+      const result = await getDatabaseDetails(
+        TenantId,
+        databaseId,
+        context.user
+      );
+      return result;
+    },
   },
+
   Mutation: {
-    createDatabaseWithRows: async (_, { input }) => {
-      try {
-        const { tenantId, name, rows } = input;
+    createDatabaseWithRows: async (_, { input }, context) => {
+      if (!context.user) throwUserInputError("Authentication required");
+      const result = await createDBWithRow(input, context.user);
+      return result;
+    },
 
-        console.log(rows)
-
-        const formattedRows = rows.map((row) => ({
-          rowNumber: row.rowNumber,
-          data: row.fields.map((field) => ({
-            field: {
-              fieldName: field.fieldName,
-              fieldType: field.fieldType,
-            },
-            value: {
-              value: field.value,
-            },
-          })),
-        }));
-
-        const database = new Database({
-          tenantId,
-          name,
-          rows: formattedRows,
-        });
-
-        await database.save();
-
-        return database;
-      } catch (error) {
-        console.error("Error creating database:", error);
-        throw new Error("Failed to create database");
-      }
+    deleteDatabases: async (_, { input }, context) => {
+      if (!context.user) throwUserInputError("Authentication required");
+      const result = await deleteDatabasesByIds(input, context.user);
+      return result;
     },
   },
 };

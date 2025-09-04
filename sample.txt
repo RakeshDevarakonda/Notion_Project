@@ -1,90 +1,63 @@
-{
-  "_id": "64ff0000abcd5678ef900999",
-  "databaseId": "64fe2000abcd5678ef902000",
-  "tenantId": "64fe0000abcd5678ef900001",
-  "values": [
-    {
-      "rowId": "64ff1000abcd5678ef901001",
-      "rowNumber": 1,
-      "data": [
-        {
-          "field": {
-            "fieldId": "64fe1111abcd5678ef900111",
-            "fieldName": "Project Name",
-            "fieldType": "text"
-          },
-          "value": {
-            "valueId": "64ff2000abcd5678ef902001",
-            "value": "Website Redesign"
-          }
-        },
-        {
-          "field": {
-            "fieldId": "64fe1112abcd5678ef900112",
-            "fieldName": "Start Date",
-            "fieldType": "date"
-          },
-          "value": {
-            "valueId": "64ff2001abcd5678ef902002",
-            "value": "2025-09-01"
-          }
-        },
-        {
-          "field": {
-            "fieldId": "64fe1113abcd5678ef900113",
-            "fieldName": "Budget",
-            "fieldType": "number"
-          },
-          "value": {
-            "valueId": "64ff2002abcd5678ef902003",
-            "value": 15000
-          }
-        }
+mutation {
+  createDatabaseWithRows(
+    input: {
+      name: "Contacts"
+      TenantId:"68b9444955793cb27cd59fed"
+      fields: [
+        { name: "Full Name", type: "text" }
+        { name: "Email", type: "text" }
+        { name: "Age", type: "number" }
+        { name: "Status", type: "select", options: ["Active", "Inactive"] }
+        { name: "Tags", type: "multi-select", options: ["Friend", "Family", "Work"] }
+    
       ]
-    },
-    {
-      "rowId": "64ff1001abcd5678ef901002",
-      "rowNumber": 2,
-      "data": [
+      rows: [
         {
-          "field": {
-            "fieldId": "64fe1111abcd5678ef900111",
-            "fieldName": "Project Name",
-            "fieldType": "text"
-          },
-          "value": {
-            "valueId": "64ff2003abcd5678ef902004",
-            "value": "Mobile App Development"
-          }
+          values: [
+            { value: "Rakesh" },
+            { value: "rakesh@mail.com" },
+            { value: 30 },
+            { value: "Active" },
+            { value: ["Friend", "Work"] },
+         
+          ]
         },
         {
-          "field": {
-            "fieldId": "64fe1112abcd5678ef900112",
-            "fieldName": "Start Date",
-            "fieldType": "date"
-          },
-          "value": {
-            "valueId": "64ff2004abcd5678ef902005",
-            "value": "2025-09-05"
-          }
-        },
-        {
-          "field": {
-            "fieldId": "64fe1113abcd5678ef900113",
-            "fieldName": "Budget",
-            "fieldType": "number"
-          },
-          "value": {
-            "valueId": "64ff2005abcd5678ef902006",
-            "value": 25000
-          }
+          values: [
+            { value: "John" },
+            { value: "john@mail.com" },
+            { value: 28 },
+            { value: "Inactive" },
+            { value: "Family" },
+           
+          ]
         }
       ]
     }
-  ],
-  "orderIndex": 0,
-  "createdAt": "2025-09-03T17:00:00.000Z",
-  "updatedAt": "2025-09-03T17:00:00.000Z"
+  ) {
+    database {
+      _id
+      Tenant
+      name
+      fields {
+        _id
+        name
+        type
+        options
+        relation
+      }
+    }
+    rows {
+      _id
+      Tenant
+      database
+      values {
+        _id
+        fieldId
+        value
+      }
+    }
+  }
 }
 
 
@@ -96,37 +69,147 @@
 
 
 mutation {
-  createDatabaseWithRows(input: {
-    tenantId: "64fe0000abcd5678ef900001",
-    name: "Projects Database",
-    rows: [
-      {
-        rowNumber: 1,
-        fields: [
-          { fieldName: "Project Name", fieldType: "text", value: "Website Redesign" },
-          { fieldName: "Start Date", fieldType: "date", value: "2025-09-01" },
-          { fieldName: "Budget", fieldType: "number", value: "15000" }
-        ]
-      },
-      {
-        rowNumber: 2,
-        fields: [
-          { fieldName: "Project Name", fieldType: "text", value: "Mobile App Development" },
-          { fieldName: "Start Date", fieldType: "date", value: "2025-09-05" },
-          { fieldName: "Budget", fieldType: "number", value: "25000" }
-        ]
-      }
+  createNewRow(
+    input: {
+      TenantId: "68b9444955793cb27cd59fed"
+      databaseId: "68b94baf521d1e820b97a2a6"
+      values: [
+        { value: "Rakesh" }                       
+        { value: "rakesh@mail.com" }           
+        { value: 9876543210 }                   
+        { value: ["Friend", "Work"] }            
+        { value: "Work" }                        
+   
+      ]
+    }
+  ) {
+    _id
+    database
+    Tenant
+    values {
+      _id
+      fieldId
+      value
+    }
+  }
+}
+
+
+
+
+
+
+mutation {
+  createFieldAndValues(input: {
+    TenantId: "68b9444955793cb27cd59fed",
+    databaseId: "68b9575eaec5eaf3364005fb",
+    fields: [
+      { name: "Email", type: "text" },
+      { name: "Phone", type: "number" },
+     
+    ],
+    values: [
+      { rowId: "68b9575eaec5eaf336400602", value: "rakesh@mail.com" },
+      { rowId: "68b9575eaec5eaf336400602", value: 9876543210 },
+     
     ]
   }) {
-    _id
-    name
-    rows {
-      rowNumber
-      data {
-        fieldName
-        fieldType
+   
+    newFields {
+      _id
+      name
+      type
+      options
+      relation
+    }
+    updatedRowIds 
+  }
+}
+
+
+
+
+
+
+mutation {
+  updateValues(input: {
+    TenantId: "68b9444955793cb27cd59fed",
+    databaseId: "68b9575eaec5eaf3364005fb",
+    updates: [
+      
+      { 
+        rowId: "68b9575eaec5eaf336400602", 
+        valueId: "68b96c57b08c50184d27e227", 
+        newValue: 987654321 
+      },
+
+        { 
+        rowId: "68b9575eaec5eaf336400602", 
+        valueId: "68b96c57b08c50184d27e226", 
+        newValue: "drk@exampole.com" 
+      },
+      
+    ]
+  }) {
+   
+    updatedRows{
+      _id,database,
+      values{
+        _id
+        fieldId
         value
       }
     }
+  }
+}
+
+
+
+
+
+
+mutation {
+  updateMultipleFields(input: {
+    TenantId: "68b9444955793cb27cd59fed",
+    databaseId: "68b9575eaec5eaf3364005fb",
+    updates: [
+      {
+        fieldId: "68b96c57b08c50184d27e223",
+        values: {
+          name: "select email",
+          type: "text",
+         
+        }
+      }
+     
+    ]
+  }) {
+    updatedFields {
+      _id
+      name
+      type
+      options
+      relation
+    }
+  }
+}
+
+
+
+
+
+
+mutation {
+  deleteFields(input: {
+    TenantId: "68b9444955793cb27cd59fed",
+    databaseId: "68b9575eaec5eaf3364005fb",
+    fieldIds: [
+      "68b96c57b08c50184d27e223",
+      "68b96c57b08c50184d27e223",
+  
+    ]
+  }) {
+    success
+    deletedFieldIds
   }
 }

@@ -1,6 +1,15 @@
-// import authschema from "./authschema.js";
+import { databaseMutation } from "./mutations/databaseMutation.js";
+import { fieldsAndValuesMutation } from "./mutations/fieldsAndValuesMutation.js";
+import { rowsMutation } from "./mutations/rowsMutation.js";
+import { databaseQueries } from "./queries/databaseQueries.js";
+import { fieldAndValueQueries } from "./queries/fieldAndValueQueries.js";
+import { rowQueries } from "./queries/rowQueries.js";
 
-import { createDatabaseSchema } from "./databaseSchema.js";
-
-
-export const typeDefs = [createDatabaseSchema];
+export const typeDefs = [
+  databaseMutation,
+  fieldsAndValuesMutation,
+  rowsMutation,
+  databaseQueries,
+  fieldAndValueQueries,
+  rowQueries,
+];

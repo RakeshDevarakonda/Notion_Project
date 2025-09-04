@@ -1,6 +1,6 @@
 import { body, param } from "express-validator";
 import { throwError } from "./throwError.js";
-
+import { UserInputError } from "apollo-server-errors";
 import mongoose from "mongoose";
 
 export const registerValidation = [
@@ -20,6 +20,14 @@ export const validateObjectId = (id, name = "ID") => {
   }
 };
 
+
+export const graphQlvalidateObjectId = (id, name = "ID") => {
+  if (!mongoose.isValidObjectId(id)) {
+    throw new UserInputError(`Invalid ${name}`, { invalidArgs: [name] });
+  }
+};
+
+
 export const validateCreateTenant = [
   body("name").trim().notEmpty().withMessage("Tenant name is required"),
 ];
@@ -36,7 +44,6 @@ export const validateInviteUserToTenant = [
 export const validateAcceptOrRejectInvite = [
   param("tenantId").notEmpty().withMessage("Invalid tenant ID"),
 ];
-
 
 // export const validaterequest = (validations, resolver) => async (_, args, context, info) => {
 //   const req = { body: args };
