@@ -8,12 +8,14 @@ export const databaseResolver = {
   JSON: GraphQLJSON,
 
   Query: {
-    getDatabaseData: async (_, { TenantId, databaseId }, context) => {
+    getDatabaseData: async (_, { TenantId, databaseId ,page,limit}, context) => {
       if (!context.user) throwUserInputError("Authentication required");
       const result = await getDatabaseDetails(
         TenantId,
         databaseId,
-        context.user
+        context.user,
+        page,limit
+
       );
       return result;
     },

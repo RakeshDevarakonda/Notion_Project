@@ -6,7 +6,9 @@ import { graphQlvalidateObjectId } from "../../../utils/validate.js";
 export const getRowDetails = async (
   TenantId,
   rowId,
+
   databaseId,
+
   contextUser
 ) => {
   if (!TenantId) throwUserInputError("TenantId is required");
@@ -30,5 +32,5 @@ export const getRowDetails = async (
 
   if (!row) throwUserInputError("Row not found");
 
-  return {row};
+  return { row };
 };

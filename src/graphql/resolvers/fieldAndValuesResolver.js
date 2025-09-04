@@ -1,14 +1,23 @@
 import GraphQLJSON from "graphql-type-json";
 import { throwUserInputError } from "../../utils/throwError.js";
-import { createFieldandValues, deleteFields, editValueById, updateMultipleFields } from "../services/mutations/fieldAndValuesMutaionService.js";
-
+import {
+  createFieldandValues,
+  deleteFields,
+  editValueById,
+  updateMultipleFields,
+} from "../services/mutations/fieldAndValuesMutaionService.js";
+import { getValuesByField } from "../services/queries/fieldAndValuesQueryServices.js";
 
 export const fieldAndValuesResolver = {
   JSON: GraphQLJSON,
 
-
+  Query: {
+    getValuesByField: async (_, { input }, context) => {
+      const result = await getValuesByField(input, context.user);
+      return result;
+    },
+  },
   Mutation: {
-   
     createFieldAndValues: async (_, { input }, context) => {
       if (!context.user) throwUserInputError("Authentication required");
       const result = await createFieldandValues(input, context.user);
@@ -31,7 +40,5 @@ export const fieldAndValuesResolver = {
       const result = await deleteFields(input, context.user);
       return result;
     },
-
-  
   },
 };

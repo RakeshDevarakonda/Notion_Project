@@ -8,6 +8,9 @@ scalar JSON
 type DatabaseDetailsPayload {
   database: Database!
   rows: [Row]!
+  page: Int!
+  limit: Int!
+  totalRows: Int!
 }
 
 type Database {
@@ -46,7 +49,7 @@ type Value {
 
 
 type Query {
-  getDatabaseData(TenantId: ID!, databaseId: ID!): DatabaseDetailsPayload!
+  getDatabaseData(TenantId: ID!, databaseId: ID!,page: Int, limit: Int): DatabaseDetailsPayload!
 }
 
 `;

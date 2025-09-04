@@ -1,4 +1,4 @@
-import { Database } from "../../../models/Database.js";
+import { Database, Row } from "../../../models/Database.js";
 import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
 import { graphQlvalidateObjectId } from "../../../utils/validate.js";

@@ -7,7 +7,7 @@ export const rowsResolver = {
   JSON: GraphQLJSON,
 
   Query: {
-    getRowById: async (_, { TenantId, rowId, databaseId }, context) => {
+    getRowById: async (_, { TenantId, rowId, databaseId,page,limit }, context) => {
       if (!context.user) throwUserInputError("Authentication required");
       const result = await getRowDetails(
         TenantId,

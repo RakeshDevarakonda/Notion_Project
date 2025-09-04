@@ -3,7 +3,13 @@ import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
 import { graphQlvalidateObjectId } from "../../../utils/validate.js";
 
-export const getDatabaseDetails = async (TenantId, databaseId, contextUser) => {
+export const getDatabaseDetails = async (
+  TenantId,
+  databaseId,
+  contextUser,
+  page = 1,
+  limit = 10
+) => {
   if (!TenantId) throwUserInputError("TenantId is required");
   if (!databaseId) throwUserInputError("DatabaseId is required");
 
@@ -14,14 +20,18 @@ export const getDatabaseDetails = async (TenantId, databaseId, contextUser) => {
   if (!tenant) throwUserInputError("Tenant not found");
 
   const member = tenant.members.find(
-    (m) => m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
+    (m) =>
+      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
   );
   if (!member) throwUserInputError("User not a member of this tenant");
 
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
-  const rows = await Row.find({ database: databaseId });
+  const totalRows = await Row.countDocuments({ database: databaseId });
+  const rows = await Row.find({ database: databaseId })
+    .skip((page - 1) * limit)
+    .limit(limit);
 
-  return { database, rows };
+  return { database, rows, page, limit,totalRows };
 };

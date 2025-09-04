@@ -1,18 +1,24 @@
 export const fieldAndValueQueries = `#graphql
+scalar JSON
+
 
 type FieldPayload {
-  field: Field!
+  field: Field
   values: [Value]
+  page: Int
+  limit: Int
+  totalValuesCount: Int
+
 }
 
 type Value {
-  _id: ID!
-  fieldId: ID!
+  rowId: ID
+  valueid: ID
   value: JSON
 }
 
 type Field {
-  _id: ID!
+  _id: ID
   name: String
   type: String
   options: [String]
@@ -20,10 +26,32 @@ type Field {
 }
 
 
+input GetValuesByFieldInput {
+  TenantId: ID
+  databaseId: ID
+  fieldId: ID
+  page: Int
+  limit: Int
+}
+
+type FieldValuePayload {
+  values: [FieldValue]
+  page: Int
+  limit: Int
+  totalValuesCount: Int
+}
+
+
+type FieldValue {
+  rowId: ID
+  valueId: ID
+  value: JSON
+}
+
 
 type Query {
+  getValuesByField(input: GetValuesByFieldInput): FieldPayload
 
-  getFieldValues(TenantId: ID!, databaseId: ID!, fieldID: ID!): FieldPayload!
 }
 
 `;
