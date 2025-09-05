@@ -55,13 +55,11 @@ const normalizeValue = (field, value) => {
   }
 };
 
-export const createFieldandValues = async (input, contextUser) => {
-  const { TenantId, databaseId, fields, values } = input;
+export const createFieldandValues = async (input) => {
+  const { databaseId, fields, values } = input;
 
   const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
 
-  // Create new fields
   const newFields = fields.map((field) => {
     const newField = database.fields.create({
       name: field.name,
@@ -71,6 +69,7 @@ export const createFieldandValues = async (input, contextUser) => {
     database.fields.push(newField);
     return newField;
   });
+
   await database.save();
 
   const updatedRowIds = [];
@@ -128,14 +127,10 @@ export const createFieldandValues = async (input, contextUser) => {
   return { newFields, updatedRowIds };
 };
 
-export const editValueById = async (input, contextUser) => {
-  const { TenantId, databaseId, updates } = input;
-
-  const tenant = await Tenant.findById(TenantId);
-  if (!tenant) throwUserInputError("Tenant not found");
+export const editValueById = async (input) => {
+  const { databaseId, updates } = input;
 
   const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
 
   const updatedRows = [];
   const bulkOps = [];
@@ -256,26 +251,20 @@ export const updateMultipleFields = async (input, contextUser) => {
   return { updatedFields };
 };
 
-export const deleteFields = async (input, contextUser) => {
-  const { TenantId, databaseId, fieldIds } = input;
-
-
-  const tenantDetails = await Tenant.findById(TenantId);
-  if (!tenantDetails) throwUserInputError("Tenant not found");
+export const deleteFields = async (input) => {
+  const {  databaseId, fieldIds } = input;
 
 
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
-  const sameCheck = await Database.findOne({
-    _id: databaseId,
-    tenantId: TenantId,
-  });
 
-  if (!sameCheck) {
-    throwUserInputError("Database not found for this tenant");
+  const existingFieldIds = database.fields.map((f) => f._id.toString());
+  const invalidFieldIds = fieldIds.filter((id) => !existingFieldIds.includes(id));
+
+  if (invalidFieldIds.length > 0) {
+    throwUserInputError(`These field IDs do not exist in the database: ${invalidFieldIds.join(", ")}`);
   }
-
 
   database.fields = database.fields.filter(
     (field) => !fieldIds.includes(field._id.toString())

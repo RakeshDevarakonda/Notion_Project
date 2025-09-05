@@ -1,9 +1,7 @@
+import { Database } from "../models/Database.js";
 import Tenant from "../models/Tenant.js";
 import { throwUserInputError } from "../utils/throwError.js";
-import {
-  graphQlvalidateObjectId,
-  validateObjectId,
-} from "../utils/validate.js";
+import { validateObjectId } from "../utils/validate.js";
 
 export const checkTenantMember = async (req, res, next) => {
   try {
@@ -50,10 +48,6 @@ export const checkTenantMember = async (req, res, next) => {
 
 export const authorizeTenantRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.member) {
-      return res.status(500).json({ error: "Tenant membership check missing" });
-    }
-
     if (!allowedRoles.includes(req.member.role)) {
       return res.status(403).json({
         error: `Access denied: Only roles [${allowedRoles.join(
@@ -75,8 +69,6 @@ export const checkTenantMemberGraphql = (resolverFn) => {
     const TenantId = args.TenantId || args.input?.TenantId;
     if (!TenantId) throwUserInputError("TenantId is required");
 
-    graphQlvalidateObjectId(TenantId, "Tenant ID");
-
     const tenantDetails = await Tenant.findById(TenantId);
     if (!tenantDetails) throwUserInputError("Tenant not found");
 
@@ -91,6 +83,19 @@ export const checkTenantMemberGraphql = (resolverFn) => {
       );
     }
 
+    const databaseId = args.databaseId || args.input?.databaseId;
+
+    if (databaseId) {
+      const database = await Database.findById(databaseId);
+      if (!database) {
+        throwUserInputError("Database not found");
+      }
+
+      if (database.Tenant.toString() !== TenantId) {
+        throwUserInputError("Database does not belong to this tenant");
+      }
+    }
+
     context.tenantDetails = tenantDetails;
     context.member = member;
 
@@ -101,13 +106,6 @@ export const checkTenantMemberGraphql = (resolverFn) => {
 export const authorizeTenantRolesGraphql = (...allowedRoles) => {
   return (resolverFn) => {
     return async (parent, args, context, info) => {
-      const member = context.member;
-      if (!member) {
-        throwUserInputError(
-          "Tenant membership check missing before role check"
-        );
-      }
-
       if (!allowedRoles.includes(member.role)) {
         throwUserInputError(
           `Access denied: Only roles [${allowedRoles.join(
@@ -115,26 +113,6 @@ export const authorizeTenantRolesGraphql = (...allowedRoles) => {
           )}] can perform this action`
         );
       }
-
-      return resolverFn(parent, args, context, info);
-    };
-  };
-};
-
-export const validateInputGraphql = (schema) => {
-  return (resolverFn) => {
-    return async (parent, args, context, info) => {
-      const { error, value } = schema.validate(args.input, {
-        abortEarly: false,
-      });
-
-      if (error) {
-        throwUserInputError(
-          `Validation error: ${error.details.map((d) => d.message).join(", ")}`
-        );
-      }
-
-      args.input = value;
 
       return resolverFn(parent, args, context, info);
     };

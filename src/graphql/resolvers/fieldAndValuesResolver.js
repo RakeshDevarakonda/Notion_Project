@@ -14,22 +14,15 @@ import {
   authorizeTenantRolesGraphql,
   checkTenantMemberGraphql,
   composeMiddlewares,
-  validateInputGraphql,
 } from "../../middleware/authorizeRoles.js";
-import {
-  createFieldAndValuesSchema,
-  deleteFieldsSchema,
-  editValueByIdSchema,
-  updateMultipleFieldsSchema,
-} from "../../utils/joiValidations.js";
 
 export const fieldAndValuesResolver = {
   JSON: GraphQLJSON,
 
   Query: {
     getValuesByField: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, { input }, context) => {
-        const result = await getValuesByField(input, context.user);
+      async (_, { input }) => {
+        const result = await getValuesByField(input);
         return result;
       }
     ),
@@ -55,42 +48,33 @@ export const fieldAndValuesResolver = {
   Mutation: {
     createFieldAndValues: composeMiddlewares(
       checkTenantMemberGraphql,
-      validateInputGraphql(createFieldAndValuesSchema),
       authorizeTenantRolesGraphql("Admin")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await createFieldandValues(input, context.user);
+    )(async (_, { input }) => {
+      const result = await createFieldandValues(input);
       return result;
     }),
 
     updateValues: composeMiddlewares(
       checkTenantMemberGraphql,
-      validateInputGraphql(editValueByIdSchema),
       authorizeTenantRolesGraphql("Admin", "Editor")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await editValueById(input, context.user);
+    )(async (_, { input }) => {
+      const result = await editValueById(input);
       return result;
     }),
 
     updateMultipleFields: composeMiddlewares(
       checkTenantMemberGraphql,
-      validateInputGraphql(updateMultipleFieldsSchema),
 
       authorizeTenantRolesGraphql("Admin", "Editor")
     )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
       const result = await updateMultipleFields(input, context.user);
       return result;
     }),
     deleteFields: composeMiddlewares(
-      validateInputGraphql(deleteFieldsSchema),
-
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await deleteFields(input, context.user);
+    )(async (_, { input }) => {
+      const result = await deleteFields(input);
       return result;
     }),
   },

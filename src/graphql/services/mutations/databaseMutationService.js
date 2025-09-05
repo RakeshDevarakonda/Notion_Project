@@ -1,12 +1,8 @@
 import { Database, Row } from "../../../models/Database.js";
-import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
 
 export const createDBWithRowsAndValues = async (input, contextUser) => {
   const { name, TenantId, fields, rows } = input;
-
-  const tenantDetails = await Tenant.findOne({ _id: TenantId });
-  if (!tenantDetails) throwUserInputError("Tenant not found");
 
   const savedDatabase = new Database({
     name,
@@ -88,7 +84,6 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
           break;
         case "relation":
           if (value) {
-
             const relationDb = await Database.findById(value);
             if (!relationDb) throwUserInputError("Related database not found");
 
@@ -120,18 +115,8 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
   return { database: savedDatabase, rows: savedRows };
 };
 
-export const deleteDatabasesByIds = async (input, contextUser) => {
-  const { TenantId, databaseIds } = input;
-
-
-  const tenant = await Tenant.findById(TenantId);
-  if (!tenant) throwUserInputError("Tenant not found");
-
-  const member = tenant.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member) throwUserInputError("User is not a member of this tenant");
+export const deleteDatabasesByIds = async (input) => {
+  const { databaseIds, TenantId } = input;
 
   const existingDatabases = await Database.find({
     _id: { $in: databaseIds },
@@ -143,6 +128,18 @@ export const deleteDatabasesByIds = async (input, contextUser) => {
     throwUserInputError(`Database Not Found: ${invalidDbIds.join(", ")}`);
   }
 
+  const unauthorizedDbIds = existingDatabases
+    .filter((db) => db.Tenant.toString() !== TenantId)
+    .map((db) => db._id.toString());
+
+  if (unauthorizedDbIds.length > 0) {
+    throwUserInputError(
+      `Unauthorized: Databases do not belong to this tenant: ${unauthorizedDbIds.join(
+        ", "
+      )}`
+    );
+  }
+
   await Row.deleteMany({ database: { $in: databaseIds } });
 
   await Database.deleteMany({ _id: { $in: databaseIds } });
@@ -150,16 +147,10 @@ export const deleteDatabasesByIds = async (input, contextUser) => {
   return { success: true, deletedDatabaseIds: databaseIds };
 };
 
-export const updateDatabase = async (input, contextUser) => {
-  const { TenantId, databaseId, newName } = input;
-
-  const tenant = await Tenant.findById(TenantId);
-  if (!tenant) throwUserInputError("Tenant not found");
+export const updateDatabase = async (input) => {
+  const { databaseId, newName } = input;
 
   const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
-  if (database.Tenant.toString() !== TenantId)
-    throwUserInputError("Database does not belong to this tenant");
 
   database.name = newName;
   await database.save();

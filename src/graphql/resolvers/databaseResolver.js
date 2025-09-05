@@ -10,28 +10,15 @@ import {
   authorizeTenantRolesGraphql,
   checkTenantMemberGraphql,
   composeMiddlewares,
-  validateInputGraphql,
 } from "../../middleware/authorizeRoles.js";
-import {
-  createDBWithRowSchema,
-  deleteDatabasesSchema,
-  updateDatabaseSchema,
-} from "../../utils/joiValidations.js";
 
 export const databaseResolver = {
   JSON: GraphQLJSON,
 
   Query: {
     getDatabaseData: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, { TenantId, databaseId, page, limit }, context) => {
-        if (!context.user) throwUserInputError("Authentication required");
-        const result = await getDatabaseDetails(
-          TenantId,
-          databaseId,
-          context.user,
-          page,
-          limit
-        );
+      async (_, { databaseId, page, limit }) => {
+        const result = await getDatabaseDetails(databaseId, page, limit);
         return result;
       }
     ),
@@ -39,32 +26,26 @@ export const databaseResolver = {
 
   Mutation: {
     createDatabaseWithRows: composeMiddlewares(
-      validateInputGraphql(createDBWithRowSchema),
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
     )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
       const result = await createDBWithRowsAndValues(input, context.user);
       return result;
     }),
 
     updateDatabase: composeMiddlewares(
-      validateInputGraphql(updateDatabaseSchema),
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await updateDatabase(input, context.user);
+    )(async (_, { input }) => {
+      const result = await updateDatabase(input);
       return result;
     }),
 
     deleteDatabases: composeMiddlewares(
-      validateInputGraphql(deleteDatabasesSchema),
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await deleteDatabasesByIds(input, context.user);
+    )(async (_, { input }) => {
+      const result = await deleteDatabasesByIds(input);
       return result;
     }),
   },
