@@ -1,5 +1,4 @@
 import GraphQLJSON from "graphql-type-json";
-import { throwUserInputError } from "../../utils/throwError.js";
 import {
   createDBWithRowsAndValues,
   deleteDatabasesByIds,
@@ -16,7 +15,7 @@ export const databaseResolver = {
   JSON: GraphQLJSON,
 
   Query: {
-    getDatabaseData: composeMiddlewares(checkTenantMemberGraphql)(
+    getFullDatabaseDetails: composeMiddlewares(checkTenantMemberGraphql)(
       async (_, { databaseId, page, limit }) => {
         const result = await getDatabaseDetails(databaseId, page, limit);
         return result;
@@ -25,7 +24,7 @@ export const databaseResolver = {
   },
 
   Mutation: {
-    createDatabaseWithRows: composeMiddlewares(
+    createDatabase: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
     )(async (_, { input }, context) => {
@@ -33,7 +32,7 @@ export const databaseResolver = {
       return result;
     }),
 
-    updateDatabase: composeMiddlewares(
+    updateDatabaseName: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
     )(async (_, { input }) => {

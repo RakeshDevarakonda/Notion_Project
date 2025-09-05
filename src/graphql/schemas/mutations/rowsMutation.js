@@ -1,25 +1,32 @@
 export const rowsMutation = `#graphql
 scalar JSON
 
+
+
+#----createnewrow mutation-------------------
+
 input CreateRowInput {
-  TenantId: ID!
-  databaseId: ID!
-  values: [ValueInput]!
+  TenantId: MongoID!
+  databaseId: MongoID!
+  rows: [[ValueInput!]!]!
 }
 input ValueInput {
   value: JSON!
 }
 
+#----createnewrow payload-------------------
+
+
 type Row {
-  _id: ID!
-  database: ID!
-  Tenant: ID!
+  _id: MongoID!
+  database: MongoID!
+  Tenant: MongoID!
   values: [Value!]!
 }
 
 type Value {
-  _id: ID!
-  fieldId: ID!
+  _id: MongoID!
+  fieldId: MongoID!
   value: JSON!
 }
 
@@ -27,25 +34,29 @@ type Value {
 
 
 
+#----DeleteRows mutation-------------------
 
 
 
 input DeleteRowsInput {
-  TenantId: ID!
-  databaseId: ID!
-  rowIds: [ID!]!
+  TenantId: MongoID!
+  databaseId: MongoID!
+  rowIds: [MongoID!]!
 }
+
+
+#----DeleteRows payload-------------------
 
 type DeleteRowsPayload {
   success: Boolean!
-  deletedRowIds: [ID!]!
+  deletedRowIds: [MongoID!]!
 }
 
 
 
 type Mutation {
+  createNewRows(input: CreateRowInput!): Row!
   deleteRows(input: DeleteRowsInput!): DeleteRowsPayload!
-  createNewRow(input: CreateRowInput!): Row!
 }
 
 

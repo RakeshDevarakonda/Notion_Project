@@ -1,5 +1,6 @@
 import { Database, Row } from "../../../models/Database.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
+import { processFieldValue } from "../../../utils/validate.js";
 
 export const createDBWithRowsAndValues = async (input, contextUser) => {
   const { name, TenantId, fields, rows } = input;
@@ -12,9 +13,10 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
   });
   await savedDatabase.save();
 
-  if (!fields || fields.length === 0)
+  if (!fields || fields.length === 0 || fields == undefined)
     return { database: savedDatabase, rows: [] };
-  if (!rows || rows.length === 0) return { database: savedDatabase, rows: [] };
+  if (!rows || rows.length === 0 || rows == undefined)
+    return { database: savedDatabase, rows: [] };
 
   const rowDocs = [];
 
@@ -23,82 +25,18 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
 
     for (let i = 0; i < savedDatabase.fields.length; i++) {
       const field = savedDatabase.fields[i];
-      let value = r.values[i] !== undefined ? r.values[i].value : undefined;
+      let value = r.values[i].value;
 
       if (value === undefined || value === null) {
-        switch (field.type) {
-          case "number":
-            value = 0;
-            break;
-          case "boolean":
-            value = false;
-            break;
-          case "multi-select":
-            value = [];
-            break;
-          case "select":
-            value =
-              field.options && field.options.length > 0 ? field.options[0] : "";
-            break;
-          case "relation":
-            value = null;
-            break;
-          case "date":
-            value = null;
-            break;
-          default:
-            value = "";
-        }
+        throwUserInputError("Value canot be null or undefined");
       }
 
-      switch (field.type) {
-        case "number":
-          value = Number(value);
-          break;
-        case "boolean":
-          value = Boolean(value);
-          break;
-        case "multi-select":
-          if (!Array.isArray(value)) value = [value];
-          break;
-        case "select":
-          if (!field.options.includes(value)) value = "";
-          break;
-        case "date":
-          if (typeof value === "string") {
-            const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
-            const dateObj = new Date(value);
-            const [y, m, d] = value.split("-").map(Number);
-            if (
-              !isValidDate ||
-              dateObj.getFullYear() !== y ||
-              dateObj.getMonth() + 1 !== m ||
-              dateObj.getDate() !== d
-            ) {
-              throwUserInputError(
-                `Invalid date for field "${field.name}". Use YYYY-MM-DD`
-              );
-            }
-            value = dateObj;
-          }
-          break;
-        case "relation":
-          if (value) {
-            const relationDb = await Database.findById(value);
-            if (!relationDb) throwUserInputError("Related database not found");
-
-            if (
-              relationDb.createdBy.toString() !==
-                savedDatabase.createdBy.toString() ||
-              relationDb.Tenant.toString() !== savedDatabase.Tenant.toString()
-            ) {
-              value = null;
-            } else {
-              value = new mongoose.Types.ObjectId(value);
-            }
-          }
-          break;
-      }
+      processFieldValue(
+        field,
+        value,
+        savedDatabase.Tenant.toString(),
+        savedDatabase.createdBy.toString()
+      );
 
       valuesArray.push({ fieldId: field._id, value });
     }

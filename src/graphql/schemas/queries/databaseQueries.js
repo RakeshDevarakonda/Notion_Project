@@ -2,9 +2,6 @@ export const databaseQueries = `#graphql
 
 scalar JSON
 
-
-
-
 type DatabaseDetailsPayload {
   database: Database!
   rows: [Row]!
@@ -14,41 +11,41 @@ type DatabaseDetailsPayload {
 }
 
 type Database {
-  _id: ID!
+  _id: MongoID!
   name: String!
-  Tenant: ID!
-  createdBy: ID!
-  fields: [Field]
+  Tenant: MongoID!
+  createdBy: MongoID!
+  fields: [Field!]!
 }
 
 
 type Field {
-  _id: ID!
-  name: String
-  type: String
-  options: [String]
+  _id: MongoID!
+  name: String!
+  type: String!
+  options: [String!]!
 }
 
 
 
 
 type Row {
-  _id: ID!
-  database: ID!
-  Tenant: ID!
-  values: [Value]
+  _id: MongoID!
+  database: MongoID!
+  Tenant: MongoID!
+  values: [Value!]!
 }
 
 type Value {
-  _id: ID!
-  fieldId: ID!
+  _id: MongoID!
+  fieldId: MongoID!
   value: JSON
 }
 
 
 
 type Query {
-  getDatabaseData(TenantId: ID!, databaseId: ID!,page: Int, limit: Int): DatabaseDetailsPayload!
+  getFullDatabaseDetails(TenantId: MongoID!, databaseId: MongoID!,page: Int, limit: Int): DatabaseDetailsPayload!
 }
 
 `;

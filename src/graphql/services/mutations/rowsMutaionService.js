@@ -1,149 +1,57 @@
 import { Database, Row } from "../../../models/Database.js";
-import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { graphQlvalidateObjectId } from "../../../utils/validate.js";
+import { processFieldValue } from "../../../utils/validate.js";
 
-export const createNewRow = async (input, contextUser) => {
-  const { TenantId, databaseId, values } = input;
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(databaseId, "Database ID");
-
-  const tenantDetails = await Tenant.findById(TenantId);
-  if (!tenantDetails) throwUserInputError("Tenant not found");
-
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member) throwUserInputError("You are not a member of this tenant");
+export const createNewRows = async (input) => {
+  const { TenantId, databaseId, rows } = input;
 
   const database = await Database.findOne({
     _id: databaseId,
     Tenant: TenantId,
   });
-  if (!database) throwUserInputError("Database not found for this tenant");
 
-  const sameCheck = await Database.findOne({
-    _id: databaseId,
-    tenantId: TenantId,
-  });
 
-  if (!sameCheck) {
-    throwUserInputError("Database not found for this tenant");
-  }
+  const rowsToInsert = [];
 
-  if (!Array.isArray(values) || values.length !== database.fields.length) {
-    throwUserInputError(
-      `Values length (${values.length}) does not match number of fields (${database.fields.length})`
-    );
-  }
+  for (let r = 0; r < rows.length; r++) {
+    const rowInput = rows[r];
+    const rowValues = [];
 
-  const rowValues = [];
-  for (let i = 0; i < values.length; i++) {
-    const field = database.fields[i];
-    if (!field) throwUserInputError(`Field not found at index ${i}`);
+    for (let i = 0; i < rowInput.length; i++) {
+      const field = database.fields[i];
+      if (!field)
+        throwUserInputError(`Field not found at index ${i} for row ${r + 1}`);
 
-    let value = values[i]?.value;
+      let value = rowInput[i]?.value;
 
-    // Handle required vs empty
-    if (value === undefined || value === "") {
-      value = null;
-    }
-
-    // Type-specific validation
-    if (field.type === "number") {
-      value = value !== null ? Number(value) : 0;
-    }
-
-    if (field.type === "boolean") {
-      value = value !== null ? value : false;
-    }
-
-    if (field.type === "multi-select") {
-      if (value !== null && !Array.isArray(value)) {
-        value = [value];
-      } else {
-        value = [];
+      if (value === undefined || value === null) {
+       throwUserInputError("Value can")
       }
+
+      value = await processFieldValue(
+        field,
+        value,
+        database.Tenant.toString(),
+        database.createdBy.toString()
+      );
+
+      rowValues.push({ fieldId: field._id, value });
     }
 
-    if (field.type === "select") {
-      value = value;
-    }
-
-    if (field.type === "relation") {
-      if (value !== null) {
-        graphQlvalidateObjectId(value, "Relation ID");
-
-        const currentDbCreatedBy = database.createdBy.toString();
-        const currentTenantId = database.Tenant.toString();
-
-        const relationDb = await Database.findById(value);
-        if (!relationDb) {
-          throwUserInputError("Relation database not found");
-        }
-
-        const relationDbCreatedBy = relationDb.createdBy.toString();
-        const relationTenantId = relationDb.Tenant.toString();
-
-        if (
-          currentDbCreatedBy !== relationDbCreatedBy ||
-          currentTenantId !== relationTenantId
-        ) {
-          throwUserInputError(
-            `Relation DB must belong to same creator and same tenant for field "${field.name}"`
-          );
-        }
-
-        value = new mongoose.Types.ObjectId(value);
-      }
-    }
-
-    rowValues.push({ fieldId: field._id, value });
+    rowsToInsert.push({
+      Tenant: TenantId,
+      database: database._id,
+      values: rowValues,
+    });
   }
 
-  const newRow = new Row({
-    Tenant: TenantId,
-    database: database._id,
-    values: rowValues,
-  });
-
-  await newRow.save();
-  return newRow;
+  // Insert all rows at once
+  const newRows = await Row.insertMany(rowsToInsert);
+  return newRows; // returns array of created rows
 };
 
-export const deleteRowsByIds = async (input, contextUser) => {
-  const { TenantId, databaseId, rowIds } = input;
-
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!databaseId) throwUserInputError("DatabaseId is required");
-  if (!Array.isArray(rowIds) || rowIds.length === 0)
-    throwUserInputError("rowIds array is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(databaseId, "Database ID");
-  rowIds.forEach((id) => graphQlvalidateObjectId(id, "Row ID"));
-
-  const tenant = await Tenant.findById(TenantId);
-  if (!tenant) throwUserInputError("Tenant not found");
-
-  const sameCheck = await Database.findOne({
-    _id: databaseId,
-    tenantId: TenantId,
-  });
-
-  if (!sameCheck) {
-    throwUserInputError("Database not found for this tenant");
-  }
-
-
-
-  const member = tenant.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member) throwUserInputError("User is not a member of this tenant");
+export const deleteRowsByIds = async (input) => {
+  const { databaseId, rowIds } = input;
 
   const existingRows = await Row.find({
     _id: { $in: rowIds },

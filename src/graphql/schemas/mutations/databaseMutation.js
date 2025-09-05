@@ -1,122 +1,119 @@
 export const databaseMutation = `#graphql
 
-
 scalar JSON 
 
+scalar MongoID
 
-input FieldInput {
-  name: String
-  type: String
-  options: [String]
-}
-
-input ValueInput {
-  value: JSON
-}
-
-input RowInput {
-  values: [ValueInput]
-}
+#---- createdbwithrows mutation------
 
 input CreateDatabaseInput {
   name: String!
-  fields: [FieldInput!]!
-  rows: [RowInput]
-  TenantId: ID
+  fields: [FieldInput!]
+  rows: [RowInput!]
+  TenantId: MongoID!
 }
 
 
+input FieldInput {
+  name: String!
+  type: String!
+  options: [String]
+}
 
+
+input RowInput {
+  values: [ValueInput!]!
+}
+
+
+input ValueInput {
+  value: JSON!
+}
+
+#---- createdbwithrows payload------
 
 
 
 
 type CreateDatabasePayload {
-  database: Database
-
-  rows: [Row]
+  database: Database!
+  rows: [Row!]
 }
 
+
 type Database {
-  _id: ID
-  Tenant: ID
-  name: String
-  fields: [Field]
+  _id: MongoID!
+  Tenant: MongoID!
+  name: String!
+  fields: [Field!]
 }
 
 
 
 type Field {
-  _id: ID
-  name: String
-  type: String
+  _id: MongoID!
+  name: String!
+  type: String!
   options: [String]
 }
 
+
+
 type Row {
-  _id: ID
-  database: ID
-  Tenant: ID!
-  values: [Value]
+  _id: MongoID!
+  database: MongoID!
+  Tenant: MongoID!
+  values: [Value!]!
 }
 
 
-type Value {
-  _id: ID
-  fieldId: ID
-  value: JSON
-}
 
+#---- deleteDatabases mutaiton------
 
 input DeleteDatabasesInput {
-  TenantId: ID!
-  databaseIds: [ID!]!
+  TenantId: MongoID!
+  databaseIds: [MongoID!]!
 }
+
+
+#---- deleteDatabases payload------
+
 
 type DeleteDatabasesPayload {
   success: Boolean!
-  deletedDatabaseIds: [ID!]!
+  deletedDatabaseIds: [MongoID!]!
 }
 
 
-
-
-
-
-
-
-type Field {
-  _id: ID!
-  name: String
-  type: String
-  options: [String]
-}
-
-type UpdateMultipleFieldsPayload {
-  updatedFields: [Field!]!
-}
-
+#---- updateDatabase mutation------
 
 input updateDatabaseInput {
-  TenantId: ID!
-  databaseId: ID!
+  TenantId: MongoID!
+  databaseId: MongoID!
   newName: String!
 }
+
+#---- updateDatabase payload------
 
 
 type updateDatabasePayload {
   success: Boolean!
   database: Database!
+
+  # already Database defined at top
 }
+
+
+
 
 
 
 
 
 type Mutation {
-  createDatabaseWithRows(input: CreateDatabaseInput): CreateDatabasePayload
+  createDatabase(input: CreateDatabaseInput): CreateDatabasePayload
   deleteDatabases(input: DeleteDatabasesInput!): DeleteDatabasesPayload!
-  updateDatabase(input: updateDatabaseInput!): updateDatabasePayload!
+  updateDatabaseName(input: updateDatabaseInput!): updateDatabasePayload!
 
 }
 `;

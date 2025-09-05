@@ -1,7 +1,6 @@
 import GraphQLJSON from "graphql-type-json";
-import { throwUserInputError } from "../../utils/throwError.js";
 import {
-  createFieldandValues,
+  addFieldandValues,
   deleteFields,
   editValueById,
   updateMultipleFields,
@@ -27,6 +26,13 @@ export const fieldAndValuesResolver = {
       }
     ),
 
+    getRelationDatabaseDetails: composeMiddlewares(checkTenantMemberGraphql)(
+      async (_, { input }) => {
+        const result = await getRelationDatabaseDetails(input);
+        return result;
+      }
+    ),
+
     keywordSearch: composeMiddlewares(checkTenantMemberGraphql)(
       async (
         _,
@@ -46,15 +52,15 @@ export const fieldAndValuesResolver = {
   },
 
   Mutation: {
-    createFieldAndValues: composeMiddlewares(
+    addFieldandValues: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
     )(async (_, { input }) => {
-      const result = await createFieldandValues(input);
+      const result = await addFieldandValues(input);
       return result;
     }),
 
-    updateValues: composeMiddlewares(
+    editMultipleValueById: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin", "Editor")
     )(async (_, { input }) => {
@@ -62,7 +68,7 @@ export const fieldAndValuesResolver = {
       return result;
     }),
 
-    updateMultipleFields: composeMiddlewares(
+    editMultipleFields: composeMiddlewares(
       checkTenantMemberGraphql,
 
       authorizeTenantRolesGraphql("Admin", "Editor")

@@ -1,61 +1,22 @@
-import mongoose from "mongoose";
 import { Database, Row } from "../../../models/Database.js";
-import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
+import { processFieldValue } from "../../../utils/validate.js";
 
-const getDefaultValue = (field) => {
+const getDefaultValueForFieldType = (field) => {
   switch (field.type) {
     case "number":
-      return 0;
     case "boolean":
-      return false;
+      return null; // empty for number/boolean
     case "multi-select":
-      return [];
-    case "relation":
-      return null;
-    case "date":
-      return null;
-    default:
-      return "";
-  }
-};
-
-const normalizeValue = (field, value) => {
-  switch (field.type) {
-    case "number":
-      return Number(value);
-    case "boolean":
-      return Boolean(value);
-    case "multi-select":
-      return Array.isArray(value) ? value : [value];
+      return []; // empty array for multi-select
     case "select":
-      return field.options.includes(value) ? value : "";
-    case "date":
-      if (typeof value === "string") {
-        const isValid = /^\d{4}-\d{2}-\d{2}$/.test(value);
-        const dateObj = new Date(value);
-        const [y, m, d] = value.split("-").map(Number);
-        if (
-          !isValid ||
-          dateObj.getFullYear() !== y ||
-          dateObj.getMonth() + 1 !== m ||
-          dateObj.getDate() !== d
-        ) {
-          throwUserInputError(
-            `Invalid date for field "${field.name}". Use YYYY-MM-DD`
-          );
-        }
-        return dateObj;
-      }
-      return value;
-    case "relation":
-      return value ? new mongoose.Types.ObjectId(value) : null;
+    case "text":
     default:
-      return value;
+      return ""; // empty string for select or text
   }
 };
 
-export const createFieldandValues = async (input) => {
+export const addFieldandValues = async (input) => {
   const { databaseId, fields, values } = input;
 
   const database = await Database.findById(databaseId);
@@ -63,7 +24,7 @@ export const createFieldandValues = async (input) => {
   const newFields = fields.map((field) => {
     const newField = database.fields.create({
       name: field.name,
-      type: field.type || "text",
+      type: field.type,
       options: field.options || [],
     });
     database.fields.push(newField);
@@ -80,10 +41,17 @@ export const createFieldandValues = async (input) => {
 
     values.forEach((valObj, index) => {
       const field = newFields[index];
-      let val = valObj.value ?? getDefaultValue(field);
+      let val = valObj.value;
 
-      // Type-specific conversion
-      val = normalizeValue(field, val);
+      if (val === undefined || val === null) {
+        throwUserInputError("Value canot be null or undefined");
+      }
+      val = processFieldValue(
+        field,
+        val,
+        database.Tenant.toString(),
+        database.createdBy.toString()
+      );
 
       bulkOps.push({
         updateOne: {
@@ -110,7 +78,7 @@ export const createFieldandValues = async (input) => {
     const bulkOps = [];
     remainingRows.forEach((row) => {
       newFields.forEach((field) => {
-        const defaultVal = getDefaultValue(field);
+        const defaultVal = getDefaultValueForFieldType(field);
         bulkOps.push({
           updateOne: {
             filter: { _id: row._id },
@@ -141,14 +109,15 @@ export const editValueById = async (input) => {
     const row = await Row.findOne({ _id: rowId, database: databaseId });
     if (!row) throwUserInputError(`Row ${rowId} not found`);
 
-    const valueObj = row.values.id(valueId);
-    if (!valueObj)
-      throwUserInputError(`Value ${valueId} not found in row ${rowId}`);
-
     const field = database.fields.id(valueObj.fieldId);
     if (!field) throwUserInputError(`Field ${valueObj.fieldId} not found`);
 
-    let val = normalizeValue(field, newValue);
+    let val = processFieldValue(
+      field,
+      newValue,
+      database.Tenant.toString(),
+      database.createdBy.toString()
+    );
 
     bulkOps.push({
       updateOne: {
@@ -165,32 +134,15 @@ export const editValueById = async (input) => {
   return { updatedRows };
 };
 
-export const updateMultipleFields = async (input, contextUser) => {
-  const { TenantId, databaseId, updates } = input;
-
-  const tenantDetails = await Tenant.findById(TenantId);
-  if (!tenantDetails) throwUserInputError("Tenant not found");
+export const updateMultipleFields = async (input) => {
+  const { databaseId, updates } = input;
 
   const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
-
-  const sameCheck = await Database.findOne({
-    _id: databaseId,
-    tenantId: TenantId,
-  });
-
-  if (!sameCheck) {
-    throwUserInputError("Database not found for this tenant");
-  }
 
   const updatedFields = [];
 
   for (const upd of updates) {
     const { fieldId, values } = upd;
-
-    if (!fieldId) throwUserInputError("FieldId is required for each update");
-    if (!values || (values.name === undefined && values.type === undefined))
-      throwUserInputError("please provide name or type");
 
     const field = database.fields.id(fieldId);
     if (!field) throwUserInputError(`Field ${fieldId} not found`);
@@ -198,10 +150,15 @@ export const updateMultipleFields = async (input, contextUser) => {
     const oldType = field.type;
     const newType = values.type;
 
-    if (values.name !== undefined) field.name = values.name;
-    if (values.type !== undefined) field.type = values.type;
-    if (values.options !== undefined) field.options = values.options;
-    if (values.relation !== undefined) field.relation = values.relation;
+    if (oldType === newType) {
+      return;
+    }
+
+    field.name = values.name;
+    field.type = values.type;
+    if (options || options !== null || options !== undefined) {
+      field.options = values.options;
+    }
 
     // 🔑 If field type changed, normalize values in Row collection
     const rows = await Row.find({ database: databaseId });
@@ -215,22 +172,17 @@ export const updateMultipleFields = async (input, contextUser) => {
 
           switch (newType) {
             case "number":
-              v.value = Number(v.value) || 0;
-              break;
             case "boolean":
-              v.value = Boolean(v.value);
+              v.value = null;
               break;
             case "multi-select":
-              v.value = Array.isArray(v.value) ? v.value : [v.value];
+              v.value = [];
               break;
             case "select":
-              v.value =
-                field.options.includes(v.value) && typeof v.value === "string"
-                  ? v.value
-                  : "";
+              v.value = "";
               break;
             default:
-              v.value = v.value ? String(v.value) : "";
+              v.value = "";
           }
         }
       });
@@ -252,18 +204,21 @@ export const updateMultipleFields = async (input, contextUser) => {
 };
 
 export const deleteFields = async (input) => {
-  const {  databaseId, fieldIds } = input;
-
+  const { databaseId, fieldIds } = input;
 
   const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
-
 
   const existingFieldIds = database.fields.map((f) => f._id.toString());
-  const invalidFieldIds = fieldIds.filter((id) => !existingFieldIds.includes(id));
+  const invalidFieldIds = fieldIds.filter(
+    (id) => !existingFieldIds.includes(id)
+  );
 
   if (invalidFieldIds.length > 0) {
-    throwUserInputError(`These field IDs do not exist in the database: ${invalidFieldIds.join(", ")}`);
+    throwUserInputError(
+      `These field IDs do not exist in the database: ${invalidFieldIds.join(
+        ", "
+      )}`
+    );
   }
 
   database.fields = database.fields.filter(

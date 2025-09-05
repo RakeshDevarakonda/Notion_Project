@@ -1,29 +1,25 @@
 export const rowQueries = `#graphql
 
 type RowPayload {
-
-  row: Row!
-
+  rows: [Row!]!   
 }
 
-
 type Row {
-  _id: ID!
-  database: ID!
-  Tenant: ID!
-  values: [Value]
+  _id: MongoID!
+  database: MongoID!
+  Tenant: MongoID!
+  values: [Value!]
 }
 
 type Value {
-  _id: ID!
-  fieldId: ID!
-  value: JSON
+  _id: MongoID!
+  fieldId: MongoID!
+  value: JSON!
 }
 
 
-
 type Query {
-  getRowById(TenantId: ID!, databaseId: ID!, rowId: ID!): RowPayload!
+  getRowByIds(TenantId: MongoID!, databaseId: MongoID!, rowIds: [MongoID!]!): RowPayload!
 }
 
 `;

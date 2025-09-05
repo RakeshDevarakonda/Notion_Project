@@ -1,127 +1,130 @@
 export const fieldsAndValuesMutation = `#graphql
 
-input CreateFieldAndValuesInput {
-  TenantId: ID
-  databaseId: ID
-  fields: [FieldInput]
-  values: [ValueInput]  
-}
+scalar JSON
 
 
-input FieldInput {
-  name: String
-  type: String       
-  options: [String] 
-}
-
-
-input ValueInput {
-  rowId: ID
-  value: JSON       
-}
-
-
-type CreateFieldAndValuesPayload {
-  newFields: [Field]
-  updatedRowIds: [ID]
-}
-
-
-type Field {
-  _id: ID
-  name: String
-  type: String
-  options: [String]
-}
-
-
-
-
-type Value {
-  _id: ID
-  fieldId: ID
-  value: JSON
-}
-
-
-
-
-
-
-
-
-input UpdateMultipleFieldsInput {
-  TenantId: ID!
-  databaseId: ID!
-  updates: [UpdateFieldInput!]!
-}
-
-
-
-
-input UpdateFieldInput {
-  fieldId: ID!
-  values: UpdateFieldValuesInput!
-}
-
-input UpdateFieldValuesInput {
-  name: String
-  type: String
-  options: [String]
-}
-
-
-
+#-----updateValues mutation -----
 
 input UpdateValuesPayloadInput {
-  TenantId: ID!
-  databaseId: ID!
+  TenantId: MongoID!
+  databaseId: MongoID!
   updates: [UpdateValueInput!]!
 }
 
-
 input UpdateValueInput {
-  rowId: ID!
-  valueId: ID!
+  rowId: MongoID!
+  valueId: MongoID!
   newValue: JSON!  
 }
 
-type UpdateValuesPayload {
+#-----updateValues payload-----
 
+type UpdateValuesPayload {
   updatedRows: [UpdatedRow!]!
 }
 
-
 type UpdatedRow {
-  _id: ID!
-  database: ID!
+  _id: MongoID!
+  database: MongoID!
   values: [Value!]!
 }
 
 type Value {
-  _id: ID!
-  fieldId: ID!
-  value: JSON
+  _id: MongoID!
+  fieldId: MongoID!
+  value: JSON!
 }
 
+#-----createFieldAndValues mutation-----
+
+
+input addFieldandValuesInput {
+  TenantId: MongoID!
+  databaseId: MongoID!
+  fields: [FieldInput!]!
+  values: [ValueInput!]
+}
+
+input FieldInput {
+  name: String!
+  type: String!    
+  options: [String] 
+}
+  
+input ValueInput {
+  rowId: MongoID!
+  value: JSON!   
+}
+
+#-----createFieldAndValues payload-----
+
+type CreateFieldAndValuesPayload {
+  newFields: [Field!]!
+  updatedRowIds: [MongoID!]!
+}
+
+type Field {
+  _id: MongoID!
+  name: String!
+  type: String!
+  options: [String]
+}
+
+
+#-----deleteFields mutation-----
 
 
 input DeleteFieldsInput {
-  TenantId: ID!
-  databaseId: ID!
-  fieldIds: [ID!]!
+  TenantId: MongoID!
+  databaseId: MongoID!
+  fieldIds: [MongoID!]!
 }
+
+#-----deleteFields payload-----
+
 
 type DeleteFieldsPayload {
   success: Boolean!
-  deletedFieldIds: [ID!]!
+  deletedFieldIds: [MongoID!]!
 }
 
+
+#--updateMutiplefileds mutation-----
+
+
+
+input UpdateMultipleFieldsInput {
+  TenantId: MongoID!
+  databaseId: MongoID!
+  updates: [UpdateFieldInput!]!
+}
+
+
+input UpdateFieldInput {
+  fieldId: MongoID!
+  values: UpdateFieldValuesInput!
+}
+
+input UpdateFieldValuesInput {
+  name: String!
+  type: String!
+  options: [String]
+}
+
+#--updateMutiplefileds payload-----
+
+type UpdateMultipleFieldsPayload {
+  updatedFields: [Field!]!
+
+  #field already defined at top
+}
+
+
 type Mutation {
-  updateValues(input: UpdateValuesPayloadInput!): UpdateValuesPayload!
-  createFieldAndValues(input: CreateFieldAndValuesInput!): CreateFieldAndValuesPayload
+  editMultipleValueById(input: UpdateValuesPayloadInput!): UpdateValuesPayload!
+  addFieldandValues(input: addFieldandValuesInput!): CreateFieldAndValuesPayload!
+  editMultipleFields(input: UpdateMultipleFieldsInput!): UpdateMultipleFieldsPayload!
   deleteFields(input: DeleteFieldsInput!): DeleteFieldsPayload!
-  updateMultipleFields(input: UpdateMultipleFieldsInput!): UpdateMultipleFieldsPayload!
 
 
 }

@@ -1,7 +1,6 @@
 import GraphQLJSON from "graphql-type-json";
-import { throwUserInputError } from "../../utils/throwError.js";
 import {
-  createNewRow,
+  createNewRows,
   deleteRowsByIds,
 } from "../services/mutations/rowsMutaionService.js";
 import { getRowDetails } from "../services/Queries/rowQueryService.js";
@@ -15,27 +14,20 @@ export const rowsResolver = {
   JSON: GraphQLJSON,
 
   Query: {
-    getRowById: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, { TenantId, rowId, databaseId, page, limit }, context) => {
-        if (!context.user) throwUserInputError("Authentication required");
-        const result = await getRowDetails(
-          TenantId,
-          rowId,
-          databaseId,
-          context.user
-        );
+    getRowByIds: composeMiddlewares(checkTenantMemberGraphql)(
+      async (_, {  rowIds, databaseId }) => {
+        const result = await getRowDetails(rowIds, databaseId);
         return result;
       }
     ),
   },
 
   Mutation: {
-    createNewRow: composeMiddlewares(
+    createNewRows: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin", "Editor")
-    )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await createNewRow(input, context.user);
+    )(async (_, { input }) => {
+      const result = await createNewRow(input);
       return result;
     }),
 
@@ -43,8 +35,7 @@ export const rowsResolver = {
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
     )(async (_, { input }, context) => {
-      if (!context.user) throwUserInputError("Authentication required");
-      const result = await deleteRowsByIds(input, context.user);
+      const result = await deleteRowsByIds(input);
       return result;
     }),
   },

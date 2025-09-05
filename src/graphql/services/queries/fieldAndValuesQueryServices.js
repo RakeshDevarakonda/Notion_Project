@@ -111,3 +111,29 @@ export const keywordSearchService = async (
     results: finalResults,
   };
 };
+
+
+
+
+export const getRelationDatabaseDetails = async (valueId, page = 1, limit = 10) => {
+
+  const relatedDb = await Database.findById(valueId);
+  if (!relatedDb) throwUserInputError("Related database not found");
+
+  page = Number(page) || 1;
+  limit = Number(limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const [rows, totalRows] = await Promise.all([
+    Row.find({ database: relatedDb._id }).skip(skip).limit(limit).lean(),
+    Row.countDocuments({ database: relatedDb._id })
+  ]);
+
+  return {
+    ...relatedDb.toObject(),
+    rows,        
+    page,
+    limit,
+    totalRows,
+  };
+};
