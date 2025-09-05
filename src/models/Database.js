@@ -4,15 +4,27 @@ const FieldSchema = new mongoose.Schema({
   name: { type: String, required: true },
   type: {
     type: String,
+    required: true,
+    enum: [
+      "text",
+      "number",
+      "boolean",
+      "date",
+      "select",
+      "multi-select",
+      "relation",
+    ], // allowed field types
   },
-  options: [String],
-  relation: { type: mongoose.Schema.Types.ObjectId, ref: "Database" },
+  options: {
+    type: [String], // only needed for select / multi-select
+    default: [],
+  },
 });
 
 const DatabaseSchema = new mongoose.Schema({
   name: { type: String, required: true },
   fields: [FieldSchema],
-    createdBy: {
+  createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "TenantUser",
   },
@@ -25,7 +37,6 @@ const ValueSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Database",
   },
-
 
   fieldId: { type: mongoose.Schema.Types.ObjectId, required: true },
   value: mongoose.Schema.Types.Mixed,

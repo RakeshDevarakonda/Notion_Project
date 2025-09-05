@@ -1,29 +1,12 @@
 import { Database, Row } from "../../../models/Database.js";
 import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { graphQlvalidateObjectId } from "../../../utils/validate.js";
 
-export const createDBWithRow = async (input, contextUser) => {
+export const createDBWithRowsAndValues = async (input, contextUser) => {
   const { name, TenantId, fields, rows } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-
   const tenantDetails = await Tenant.findOne({ _id: TenantId });
-
   if (!tenantDetails) throwUserInputError("Tenant not found");
-
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-
-  if (!member)
-    throwUserInputError(
-      "User is not a member of this tenant or might be inactive"
-    );
-
-  if (!name) throwUserInputError("Database name is required");
 
   const savedDatabase = new Database({
     name,
@@ -31,38 +14,106 @@ export const createDBWithRow = async (input, contextUser) => {
     Tenant: TenantId,
     createdBy: contextUser._id,
   });
-
   await savedDatabase.save();
 
-  if (!fields || fields.length === 0) {
+  if (!fields || fields.length === 0)
     return { database: savedDatabase, rows: [] };
-  }
+  if (!rows || rows.length === 0) return { database: savedDatabase, rows: [] };
 
-  if (!rows || rows.length === 0) {
-    return { database: savedDatabase, rows: [] };
-  }
+  const rowDocs = [];
 
-  const rowDocs = rows.map((r) => ({
-    Tenant: TenantId,
-    database: savedDatabase._id,
-    values: r.values.map((v, i) => {
+  for (const r of rows) {
+    const valuesArray = [];
+
+    for (let i = 0; i < savedDatabase.fields.length; i++) {
       const field = savedDatabase.fields[i];
-      if (!field) throwUserInputError(`No field found at index ${i}`);
+      let value = r.values[i] !== undefined ? r.values[i].value : undefined;
 
-      let value = v.value;
-
-      if (field.type === "number") value = Number(value);
-
-      if (field.type === "multi-select" && !Array.isArray(value))
-        value = [value];
-
-      if (field.type === "select" && !field.options.includes(value)) {
-        console.warn(`Value "${value}" not in options for "${field.name}"`);
+      if (value === undefined || value === null) {
+        switch (field.type) {
+          case "number":
+            value = 0;
+            break;
+          case "boolean":
+            value = false;
+            break;
+          case "multi-select":
+            value = [];
+            break;
+          case "select":
+            value =
+              field.options && field.options.length > 0 ? field.options[0] : "";
+            break;
+          case "relation":
+            value = null;
+            break;
+          case "date":
+            value = null;
+            break;
+          default:
+            value = "";
+        }
       }
 
-      return { fieldId: field._id, value };
-    }),
-  }));
+      switch (field.type) {
+        case "number":
+          value = Number(value);
+          break;
+        case "boolean":
+          value = Boolean(value);
+          break;
+        case "multi-select":
+          if (!Array.isArray(value)) value = [value];
+          break;
+        case "select":
+          if (!field.options.includes(value)) value = "";
+          break;
+        case "date":
+          if (typeof value === "string") {
+            const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
+            const dateObj = new Date(value);
+            const [y, m, d] = value.split("-").map(Number);
+            if (
+              !isValidDate ||
+              dateObj.getFullYear() !== y ||
+              dateObj.getMonth() + 1 !== m ||
+              dateObj.getDate() !== d
+            ) {
+              throwUserInputError(
+                `Invalid date for field "${field.name}". Use YYYY-MM-DD`
+              );
+            }
+            value = dateObj;
+          }
+          break;
+        case "relation":
+          if (value) {
+
+            const relationDb = await Database.findById(value);
+            if (!relationDb) throwUserInputError("Related database not found");
+
+            if (
+              relationDb.createdBy.toString() !==
+                savedDatabase.createdBy.toString() ||
+              relationDb.Tenant.toString() !== savedDatabase.Tenant.toString()
+            ) {
+              value = null;
+            } else {
+              value = new mongoose.Types.ObjectId(value);
+            }
+          }
+          break;
+      }
+
+      valuesArray.push({ fieldId: field._id, value });
+    }
+
+    rowDocs.push({
+      Tenant: TenantId,
+      database: savedDatabase._id,
+      values: valuesArray,
+    });
+  }
 
   const savedRows = await Row.insertMany(rowDocs);
 
@@ -72,12 +123,6 @@ export const createDBWithRow = async (input, contextUser) => {
 export const deleteDatabasesByIds = async (input, contextUser) => {
   const { TenantId, databaseIds } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!Array.isArray(databaseIds) || databaseIds.length === 0)
-    throwUserInputError("databaseIds array is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  databaseIds.forEach((id) => graphQlvalidateObjectId(id, "Database ID"));
 
   const tenant = await Tenant.findById(TenantId);
   if (!tenant) throwUserInputError("Tenant not found");
@@ -95,7 +140,7 @@ export const deleteDatabasesByIds = async (input, contextUser) => {
   if (existingDatabases.length !== databaseIds.length) {
     const existingIds = existingDatabases.map((db) => db._id.toString());
     const invalidDbIds = databaseIds.filter((id) => !existingIds.includes(id));
-    throwUserInputError(` Database Not Found: ${invalidDbIds.join(", ")}`);
+    throwUserInputError(`Database Not Found: ${invalidDbIds.join(", ")}`);
   }
 
   await Row.deleteMany({ database: { $in: databaseIds } });
@@ -103,4 +148,21 @@ export const deleteDatabasesByIds = async (input, contextUser) => {
   await Database.deleteMany({ _id: { $in: databaseIds } });
 
   return { success: true, deletedDatabaseIds: databaseIds };
+};
+
+export const updateDatabase = async (input, contextUser) => {
+  const { TenantId, databaseId, newName } = input;
+
+  const tenant = await Tenant.findById(TenantId);
+  if (!tenant) throwUserInputError("Tenant not found");
+
+  const database = await Database.findById(databaseId);
+  if (!database) throwUserInputError("Database not found");
+  if (database.Tenant.toString() !== TenantId)
+    throwUserInputError("Database does not belong to this tenant");
+
+  database.name = newName;
+  await database.save();
+
+  return { success: true, database };
 };

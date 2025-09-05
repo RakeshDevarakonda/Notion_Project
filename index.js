@@ -28,6 +28,7 @@ app.use("/api/auth", authRouter);
 
 app.use("/api/tenant", tenantRouter);
 
+
 const server = new ApolloServer({
   typeDefs,
   resolvers,

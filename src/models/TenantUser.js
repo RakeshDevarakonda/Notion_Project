@@ -6,6 +6,19 @@ const tenantUserSchema = new mongoose.Schema(
     email: { type: String, unique: true, required: true },
     password: { type: String, required: true },
 
+    accessTenants: {
+      type: [
+        {
+          tenantId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tenant",
+            required: true,
+          },
+        },
+      ],
+      default: [],
+    },
+
     invites: {
       type: [
         {
@@ -22,6 +35,12 @@ const tenantUserSchema = new mongoose.Schema(
             type: String,
             enum: ["Pending", "Accepted", "Rejected"],
             default: "Pending",
+            required: true,
+          },
+          role: {
+            type: String,
+            enum: ["Viewer", "Editor"],
+            default: "Viewer",
             required: true,
           },
         },

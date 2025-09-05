@@ -28,7 +28,7 @@ export const getRowDetails = async (
 
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
-  const row = await Row.findById(rowId);
+  const row = await Row.find({ _id: rowId, database: databaseId });
 
   if (!row) throwUserInputError("Row not found");
 

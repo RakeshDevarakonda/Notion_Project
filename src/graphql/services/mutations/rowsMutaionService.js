@@ -7,7 +7,7 @@ export const createNewRow = async (input, contextUser) => {
   const { TenantId, databaseId, values } = input;
 
   graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(TenantId, "DatabaseId");
+  graphQlvalidateObjectId(databaseId, "Database ID");
 
   const tenantDetails = await Tenant.findById(TenantId);
   if (!tenantDetails) throwUserInputError("Tenant not found");
@@ -18,8 +18,20 @@ export const createNewRow = async (input, contextUser) => {
   );
   if (!member) throwUserInputError("You are not a member of this tenant");
 
-  const database = await Database.findById(databaseId);
-  if (!database) throwUserInputError("Database not found");
+  const database = await Database.findOne({
+    _id: databaseId,
+    Tenant: TenantId,
+  });
+  if (!database) throwUserInputError("Database not found for this tenant");
+
+  const sameCheck = await Database.findOne({
+    _id: databaseId,
+    tenantId: TenantId,
+  });
+
+  if (!sameCheck) {
+    throwUserInputError("Database not found for this tenant");
+  }
 
   if (!Array.isArray(values) || values.length !== database.fields.length) {
     throwUserInputError(
@@ -27,24 +39,69 @@ export const createNewRow = async (input, contextUser) => {
     );
   }
 
-  const rowValues = values.map((v, i) => {
+  const rowValues = [];
+  for (let i = 0; i < values.length; i++) {
     const field = database.fields[i];
     if (!field) throwUserInputError(`Field not found at index ${i}`);
 
-    let value = v.value;
+    let value = values[i]?.value;
 
-    if (value === undefined || value === "" || !value) value = null;
-
-    if (field.type === "number") value = Number(value);
-
-    if (field.type === "multi-select" && !Array.isArray(value)) value = [value];
-
-    if (field.type === "select" && !field.options.includes(value)) {
-      console.warn(`Value "${value}" not in options for field "${field.name}"`);
+    // Handle required vs empty
+    if (value === undefined || value === "") {
+      value = null;
     }
 
-    return { fieldId: field._id, value };
-  });
+    // Type-specific validation
+    if (field.type === "number") {
+      value = value !== null ? Number(value) : 0;
+    }
+
+    if (field.type === "boolean") {
+      value = value !== null ? value : false;
+    }
+
+    if (field.type === "multi-select") {
+      if (value !== null && !Array.isArray(value)) {
+        value = [value];
+      } else {
+        value = [];
+      }
+    }
+
+    if (field.type === "select") {
+      value = value;
+    }
+
+    if (field.type === "relation") {
+      if (value !== null) {
+        graphQlvalidateObjectId(value, "Relation ID");
+
+        const currentDbCreatedBy = database.createdBy.toString();
+        const currentTenantId = database.Tenant.toString();
+
+        const relationDb = await Database.findById(value);
+        if (!relationDb) {
+          throwUserInputError("Relation database not found");
+        }
+
+        const relationDbCreatedBy = relationDb.createdBy.toString();
+        const relationTenantId = relationDb.Tenant.toString();
+
+        if (
+          currentDbCreatedBy !== relationDbCreatedBy ||
+          currentTenantId !== relationTenantId
+        ) {
+          throwUserInputError(
+            `Relation DB must belong to same creator and same tenant for field "${field.name}"`
+          );
+        }
+
+        value = new mongoose.Types.ObjectId(value);
+      }
+    }
+
+    rowValues.push({ fieldId: field._id, value });
+  }
 
   const newRow = new Row({
     Tenant: TenantId,
@@ -53,7 +110,6 @@ export const createNewRow = async (input, contextUser) => {
   });
 
   await newRow.save();
-
   return newRow;
 };
 
@@ -71,6 +127,17 @@ export const deleteRowsByIds = async (input, contextUser) => {
 
   const tenant = await Tenant.findById(TenantId);
   if (!tenant) throwUserInputError("Tenant not found");
+
+  const sameCheck = await Database.findOne({
+    _id: databaseId,
+    tenantId: TenantId,
+  });
+
+  if (!sameCheck) {
+    throwUserInputError("Database not found for this tenant");
+  }
+
+
 
   const member = tenant.members.find(
     (m) =>

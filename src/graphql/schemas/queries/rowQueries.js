@@ -23,9 +23,7 @@ type Value {
 
 
 type Query {
-
   getRowById(TenantId: ID!, databaseId: ID!, rowId: ID!): RowPayload!
-
 }
 
 `;

@@ -1,25 +1,46 @@
 import express from "express";
 import {
   acceptInvite,
+  changeMemberRole,
   createTenant,
+  deleteTenant,
   getTenantById,
   inviteUserToTenant,
   rejectInvite,
+  removeMember,
+  updateTenantName,
 } from "../controllers/tenantController.js";
 import { isAuthenticated } from "../../middleware/authmiddleware.js";
-import { validateAcceptOrRejectInvite, validateCreateTenant, validateGetTenantById, validateInviteUserToTenant } from "../../utils/validate.js";
+import {  validateAcceptInvite, validateCreateTenant, validateGetTenantById, validateInviteUserToTenant, validateRejectInvite } from "../../utils/validate.js";
+import { authorizeTenantRoles, checkTenantMember } from "../../middleware/authorizeRoles.js";
 
 const tenantRouter = express.Router();
 
 
-tenantRouter.post("/createtenant", isAuthenticated, validateCreateTenant, createTenant);
+tenantRouter.get("/gettenant/:tenantId", isAuthenticated, validateGetTenantById, checkTenantMember,getTenantById);
 
-tenantRouter.post("/gettenant/:tenantId", isAuthenticated, validateGetTenantById, getTenantById);
+tenantRouter.post("/createtenant", isAuthenticated, validateCreateTenant, createTenant);
 
 tenantRouter.post("/inviteuser/:tenantId", isAuthenticated, validateInviteUserToTenant, inviteUserToTenant);
 
-tenantRouter.post("/acceptinvite/:tenantId", isAuthenticated, validateAcceptOrRejectInvite, acceptInvite);
+tenantRouter.post("/acceptinvite/:acceptId", isAuthenticated, validateAcceptInvite, acceptInvite);
 
-tenantRouter.post("/rejectinvite/:tenantId", isAuthenticated, validateAcceptOrRejectInvite, rejectInvite);
+tenantRouter.post("/rejectinvite/:tenantId", isAuthenticated, validateRejectInvite, rejectInvite);
+
+tenantRouter.post("/updateTenantName/:tenantId", isAuthenticated, checkTenantMember,authorizeTenantRoles("Admin"),updateTenantName);
+
+tenantRouter.put( "/changerole", isAuthenticated, checkTenantMember, authorizeTenantRoles("Admin"), changeMemberRole );
+
+tenantRouter.delete("/deletetenant/:tenantId", isAuthenticated, checkTenantMember, authorizeTenantRoles("Admin"),deleteTenant);
+
+tenantRouter.delete( "/removemember", isAuthenticated, checkTenantMember, authorizeTenantRoles("Admin"), removeMember );
+
+
+
+
+
+
+
 
 export default tenantRouter;
+

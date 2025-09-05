@@ -56,6 +56,12 @@ const tenantSchema = new mongoose.Schema(
             default: "Pending",
             required: true,
           },
+          role:{
+            type: String,
+            enum: ["Viewer", "Editor"],
+            default: "Viewer",
+            required: true,
+          }
         },
       ],
       default: [],

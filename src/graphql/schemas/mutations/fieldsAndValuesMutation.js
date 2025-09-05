@@ -12,7 +12,6 @@ input FieldInput {
   name: String
   type: String       
   options: [String] 
-  relation: ID     
 }
 
 
@@ -33,7 +32,6 @@ type Field {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 
@@ -70,11 +68,7 @@ input UpdateFieldValuesInput {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
-
-
-
 
 
 
@@ -112,11 +106,21 @@ type Value {
 
 
 
+input DeleteFieldsInput {
+  TenantId: ID!
+  databaseId: ID!
+  fieldIds: [ID!]!
+}
+
+type DeleteFieldsPayload {
+  success: Boolean!
+  deletedFieldIds: [ID!]!
+}
 
 type Mutation {
   updateValues(input: UpdateValuesPayloadInput!): UpdateValuesPayload!
   createFieldAndValues(input: CreateFieldAndValuesInput!): CreateFieldAndValuesPayload
-
+  deleteFields(input: DeleteFieldsInput!): DeleteFieldsPayload!
   updateMultipleFields(input: UpdateMultipleFieldsInput!): UpdateMultipleFieldsPayload!
 
 

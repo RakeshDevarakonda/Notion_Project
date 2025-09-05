@@ -8,7 +8,6 @@ input FieldInput {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 input ValueInput {
@@ -21,7 +20,7 @@ input RowInput {
 
 input CreateDatabaseInput {
   name: String!
-  fields: [FieldInput]
+  fields: [FieldInput!]!
   rows: [RowInput]
   TenantId: ID
 }
@@ -52,7 +51,6 @@ type Field {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 type Row {
@@ -82,16 +80,8 @@ type DeleteDatabasesPayload {
 
 
 
-input DeleteFieldsInput {
-  TenantId: ID!
-  databaseId: ID!
-  fieldIds: [ID!]!
-}
 
-type DeleteFieldsPayload {
-  success: Boolean!
-  deletedFieldIds: [ID!]!
-}
+
 
 
 
@@ -100,11 +90,23 @@ type Field {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 type UpdateMultipleFieldsPayload {
   updatedFields: [Field!]!
+}
+
+
+input updateDatabaseInput {
+  TenantId: ID!
+  databaseId: ID!
+  newName: String!
+}
+
+
+type updateDatabasePayload {
+  success: Boolean!
+  database: Database!
 }
 
 
@@ -113,8 +115,8 @@ type UpdateMultipleFieldsPayload {
 
 type Mutation {
   createDatabaseWithRows(input: CreateDatabaseInput): CreateDatabasePayload
-
-  deleteFields(input: DeleteFieldsInput!): DeleteFieldsPayload!
   deleteDatabases(input: DeleteDatabasesInput!): DeleteDatabasesPayload!
+  updateDatabase(input: updateDatabaseInput!): updateDatabasePayload!
+
 }
 `;

@@ -41,18 +41,12 @@ export const validateInviteUserToTenant = [
   body("email").isEmail().withMessage("Valid email is required"),
 ];
 
-export const validateAcceptOrRejectInvite = [
-  param("tenantId").notEmpty().withMessage("Invalid tenant ID"),
+export const validateAcceptInvite = [
+  param("acceptId").notEmpty().withMessage("Invalid tenant ID"),
 ];
 
-// export const validaterequest = (validations, resolver) => async (_, args, context, info) => {
-//   const req = { body: args };
-//   for (const v of validations) await v.run(req);
 
-//   const errors = validationResult(req);
-//   if (!errors.isEmpty()) {
-//     throwError(400,errors.array().map(e => e.msg).join(", "));
-//   }
+export const validateRejectInvite = [
+  param("rejectId").notEmpty().withMessage("Invalid tenant ID"),
+];
 
-//   return resolver(_, args, context, info);
-// };

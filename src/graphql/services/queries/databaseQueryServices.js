@@ -28,10 +28,19 @@ export const getDatabaseDetails = async (
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
+  const sameCheck = await Database.findOne({
+    _id: databaseId,
+    tenantId: TenantId,
+  });
+
+  if (!sameCheck) {
+    throwUserInputError("Database not found for this tenant");
+  }
+
   const totalRows = await Row.countDocuments({ database: databaseId });
   const rows = await Row.find({ database: databaseId })
     .skip((page - 1) * limit)
     .limit(limit);
 
-  return { database, rows, page, limit,totalRows };
+  return { database, rows, page, limit, totalRows };
 };

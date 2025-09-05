@@ -27,7 +27,6 @@ type Field {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 

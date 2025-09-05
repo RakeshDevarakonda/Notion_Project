@@ -45,7 +45,7 @@ type DeleteRowsPayload {
 
 type Mutation {
   deleteRows(input: DeleteRowsInput!): DeleteRowsPayload!
-    createNewRow(input: CreateRowInput!): Row!
+  createNewRow(input: CreateRowInput!): Row!
 }
 
 

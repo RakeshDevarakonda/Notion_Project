@@ -3,17 +3,19 @@ scalar JSON
 
 
 type FieldPayload {
-  field: Field
-  values: [Value]
   page: Int
   limit: Int
   totalValuesCount: Int
+  sort:Int
+  field: Field
+  values: [Value]
+
 
 }
 
 type Value {
   rowId: ID
-  valueid: ID
+  valueId: ID
   value: JSON
 }
 
@@ -22,7 +24,6 @@ type Field {
   name: String
   type: String
   options: [String]
-  relation: ID
 }
 
 
@@ -32,6 +33,7 @@ input GetValuesByFieldInput {
   fieldId: ID
   page: Int
   limit: Int
+  sort:Int
 }
 
 type FieldValuePayload {
@@ -49,9 +51,26 @@ type FieldValue {
 }
 
 
+type SearchResponse {
+  count: Int!
+  searchByValueName:String
+  searchByFieldName:String
+  results: [SearchResult!]!
+}
+
+
+type SearchResult {
+  rowId: ID!
+  value: String
+  field: Field
+}
+
+
+
+
 type Query {
   getValuesByField(input: GetValuesByFieldInput): FieldPayload
-
+  keywordSearch( TenantId: ID! databaseId: ID! searchByValueName: String, searchByFieldName: String): SearchResponse!
 }
 
 `;

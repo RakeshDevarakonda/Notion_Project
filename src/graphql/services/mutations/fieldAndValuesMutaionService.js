@@ -1,124 +1,147 @@
+import mongoose from "mongoose";
 import { Database, Row } from "../../../models/Database.js";
 import Tenant from "../../../models/Tenant.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { graphQlvalidateObjectId } from "../../../utils/validate.js";
 
+const getDefaultValue = (field) => {
+  switch (field.type) {
+    case "number":
+      return 0;
+    case "boolean":
+      return false;
+    case "multi-select":
+      return [];
+    case "relation":
+      return null;
+    case "date":
+      return null;
+    default:
+      return "";
+  }
+};
 
-
+const normalizeValue = (field, value) => {
+  switch (field.type) {
+    case "number":
+      return Number(value);
+    case "boolean":
+      return Boolean(value);
+    case "multi-select":
+      return Array.isArray(value) ? value : [value];
+    case "select":
+      return field.options.includes(value) ? value : "";
+    case "date":
+      if (typeof value === "string") {
+        const isValid = /^\d{4}-\d{2}-\d{2}$/.test(value);
+        const dateObj = new Date(value);
+        const [y, m, d] = value.split("-").map(Number);
+        if (
+          !isValid ||
+          dateObj.getFullYear() !== y ||
+          dateObj.getMonth() + 1 !== m ||
+          dateObj.getDate() !== d
+        ) {
+          throwUserInputError(
+            `Invalid date for field "${field.name}". Use YYYY-MM-DD`
+          );
+        }
+        return dateObj;
+      }
+      return value;
+    case "relation":
+      return value ? new mongoose.Types.ObjectId(value) : null;
+    default:
+      return value;
+  }
+};
 
 export const createFieldandValues = async (input, contextUser) => {
   const { TenantId, databaseId, fields, values } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!databaseId) throwUserInputError("Database ID is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-
-  const tenantDetails = await Tenant.findOne({ _id: TenantId });
-
-  if (!tenantDetails) throwUserInputError("Tenant not found");
-
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-
-  if (!member)
-    throwUserInputError(
-      "User is not a member of this tenant or might be inactive"
-    );
-
-  if (!fields || fields.length === 0) throwUserInputError("Field are required");
-
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
-  const newFields = [];
-
-  for (const field of fields) {
+  // Create new fields
+  const newFields = fields.map((field) => {
     const newField = database.fields.create({
-      name: field.name || "",
+      name: field.name,
       type: field.type || "text",
       options: field.options || [],
-      relation: field.relation || null,
     });
-
     database.fields.push(newField);
-    newFields.push(newField);
-  }
-
+    return newField;
+  });
   await database.save();
 
-  let updatedRowIds = [];
+  const updatedRowIds = [];
 
+  // Handle provided row values
   if (Array.isArray(values) && values.length > 0) {
-    const bulkOps = values.map(({ rowId, value }, i) => {
-      const field = newFields[i];
+    const bulkOps = [];
 
-      let val = value;
-      if (field.type === "multi-select" && !Array.isArray(val)) val = [val];
-      if (field.type === "number") val = Number(val);
+    values.forEach((valObj, index) => {
+      const field = newFields[index];
+      let val = valObj.value ?? getDefaultValue(field);
 
-      updatedRowIds.push(rowId);
+      // Type-specific conversion
+      val = normalizeValue(field, val);
 
-      return {
+      bulkOps.push({
         updateOne: {
-          filter: { _id: rowId },
+          filter: { _id: valObj.rowId },
           update: {
-            $set: {
-              database: database._id,
-              Tenant: TenantId,
-            },
-            $push: {
-              values: {
-                fieldId: field._id,
-                value: val,
-              },
-            },
+            $push: { values: { fieldId: field._id, value: val } },
           },
+          upsert: true,
         },
-      };
+      });
+      updatedRowIds.push(valObj.rowId);
     });
 
     if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
   }
+
+  // Fill defaults for rows not updated
+  const allRows = await Row.find({ database: databaseId });
+  const remainingRows = allRows.filter(
+    (r) => !updatedRowIds.includes(r._id.toString())
+  );
+
+  if (remainingRows.length > 0) {
+    const bulkOps = [];
+    remainingRows.forEach((row) => {
+      newFields.forEach((field) => {
+        const defaultVal = getDefaultValue(field);
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: row._id },
+            update: {
+              $push: { values: { fieldId: field._id, value: defaultVal } },
+            },
+          },
+        });
+      });
+    });
+    if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
+  }
+
   return { newFields, updatedRowIds };
 };
-
 
 export const editValueById = async (input, contextUser) => {
   const { TenantId, databaseId, updates } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!databaseId) throwUserInputError("DatabaseId is required");
-  if (!Array.isArray(updates) || updates.length === 0)
-    throwUserInputError("Updates array is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(databaseId, "Database ID");
-
-  const tenantDetails = await Tenant.findById(TenantId);
-  if (!tenantDetails) throwUserInputError("Tenant not found");
-
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member)
-    throwUserInputError(
-      "User is not a member of this tenant or might be inactive"
-    );
+  const tenant = await Tenant.findById(TenantId);
+  if (!tenant) throwUserInputError("Tenant not found");
 
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
   const updatedRows = [];
+  const bulkOps = [];
 
   for (const upd of updates) {
     const { rowId, valueId, newValue } = upd;
-
-    graphQlvalidateObjectId(rowId, "Row ID");
-    graphQlvalidateObjectId(valueId, "Value ID");
 
     const row = await Row.findOne({ _id: rowId, database: databaseId });
     if (!row) throwUserInputError(`Row ${rowId} not found`);
@@ -127,59 +150,43 @@ export const editValueById = async (input, contextUser) => {
     if (!valueObj)
       throwUserInputError(`Value ${valueId} not found in row ${rowId}`);
 
-    let val = newValue;
     const field = database.fields.id(valueObj.fieldId);
-
     if (!field) throwUserInputError(`Field ${valueObj.fieldId} not found`);
 
-    if (field.type === "multi-select" && !Array.isArray(val)) val = [val];
-    if (field.type === "number") val = Number(val);
+    let val = normalizeValue(field, newValue);
 
-    valueObj.value = val;
-    await row.save();
-
-    updatedRows.push({
-      _id: row._id,
-      database: row.database,
-      values: [
-        {
-          _id: valueObj._id,
-          fieldId: valueObj.fieldId,
-          value: valueObj.value,
-        },
-      ],
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: rowId, "values._id": valueId },
+        update: { $set: { "values.$.value": val } },
+      },
     });
+
+    updatedRows.push({ rowId, valueId, fieldId: field._id, value: val });
   }
 
-  return {
-    updatedRows,
-  };
+  if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
+
+  return { updatedRows };
 };
-
-
 
 export const updateMultipleFields = async (input, contextUser) => {
   const { TenantId, databaseId, updates } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!databaseId) throwUserInputError("DatabaseId is required");
-  if (!Array.isArray(updates) || updates.length === 0)
-    throwUserInputError("Updates array is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(databaseId, "Database ID");
-
   const tenantDetails = await Tenant.findById(TenantId);
   if (!tenantDetails) throwUserInputError("Tenant not found");
 
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member) throwUserInputError("You are not a member of this tenant");
-
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
+
+  const sameCheck = await Database.findOne({
+    _id: databaseId,
+    tenantId: TenantId,
+  });
+
+  if (!sameCheck) {
+    throwUserInputError("Database not found for this tenant");
+  }
 
   const updatedFields = [];
 
@@ -190,33 +197,57 @@ export const updateMultipleFields = async (input, contextUser) => {
     if (!values || (values.name === undefined && values.type === undefined))
       throwUserInputError("please provide name or type");
 
-    graphQlvalidateObjectId(fieldId, "Field ID");
-
     const field = database.fields.id(fieldId);
     if (!field) throwUserInputError(`Field ${fieldId} not found`);
+
+    const oldType = field.type;
+    const newType = values.type;
 
     if (values.name !== undefined) field.name = values.name;
     if (values.type !== undefined) field.type = values.type;
     if (values.options !== undefined) field.options = values.options;
     if (values.relation !== undefined) field.relation = values.relation;
 
-    if (values.type === "multi-select") {
-      const rows = await Row.find({ database: databaseId });
-      for (const row of rows) {
-        row.values.forEach((v) => {
-          if (v.fieldId.toString() === fieldId) {
-            if (!Array.isArray(v.value)) v.value = [v.value];
+    // 🔑 If field type changed, normalize values in Row collection
+    const rows = await Row.find({ database: databaseId });
+
+    for (const row of rows) {
+      let changed = false;
+
+      row.values.forEach((v) => {
+        if (v.fieldId.toString() === fieldId) {
+          changed = true;
+
+          switch (newType) {
+            case "number":
+              v.value = Number(v.value) || 0;
+              break;
+            case "boolean":
+              v.value = Boolean(v.value);
+              break;
+            case "multi-select":
+              v.value = Array.isArray(v.value) ? v.value : [v.value];
+              break;
+            case "select":
+              v.value =
+                field.options.includes(v.value) && typeof v.value === "string"
+                  ? v.value
+                  : "";
+              break;
+            default:
+              v.value = v.value ? String(v.value) : "";
           }
-        });
-        await row.save();
-      }
+        }
+      });
+
+      if (changed) await row.save();
     }
+
     updatedFields.push({
       _id: field._id,
       name: field.name,
       type: field.type,
       options: field.options,
-      relation: field.relation,
     });
   }
 
@@ -225,44 +256,26 @@ export const updateMultipleFields = async (input, contextUser) => {
   return { updatedFields };
 };
 
-
-
 export const deleteFields = async (input, contextUser) => {
   const { TenantId, databaseId, fieldIds } = input;
 
-  if (!TenantId) throwUserInputError("TenantId is required");
-  if (!databaseId) throwUserInputError("DatabaseId is required");
-  if (!Array.isArray(fieldIds) || fieldIds.length === 0)
-    throwUserInputError("fieldIds array is required");
-
-  graphQlvalidateObjectId(TenantId, "Tenant ID");
-  graphQlvalidateObjectId(databaseId, "Database ID");
-  fieldIds.forEach((id) => graphQlvalidateObjectId(id, "Field ID"));
 
   const tenantDetails = await Tenant.findById(TenantId);
   if (!tenantDetails) throwUserInputError("Tenant not found");
 
-  const member = tenantDetails.members.find(
-    (m) =>
-      m.tenantUserId.toString() === contextUser._id.toString() && m.isActive
-  );
-  if (!member)
-    throwUserInputError(
-      "User is not a member of this tenant or might be inactive"
-    );
 
   const database = await Database.findById(databaseId);
   if (!database) throwUserInputError("Database not found");
 
-  const existingFieldIds = database.fields.map((field) => field._id.toString());
+  const sameCheck = await Database.findOne({
+    _id: databaseId,
+    tenantId: TenantId,
+  });
 
-  const invalidFieldIds = fieldIds.filter(
-    (id) => !existingFieldIds.includes(id)
-  );
-
-  if (invalidFieldIds.length > 0) {
-    throwUserInputError(`Field ID's Not Found: ${invalidFieldIds.join(", ")}`);
+  if (!sameCheck) {
+    throwUserInputError("Database not found for this tenant");
   }
+
 
   database.fields = database.fields.filter(
     (field) => !fieldIds.includes(field._id.toString())
