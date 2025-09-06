@@ -21,13 +21,13 @@ tenantRouter.get("/gettenant/:tenantId", isAuthenticated, validateGetTenantById,
 
 tenantRouter.post("/createtenant", isAuthenticated, validateCreateTenant, createTenant);
 
-tenantRouter.post("/inviteuser/:tenantId", isAuthenticated, validateInviteUserToTenant, inviteUserToTenant);
+tenantRouter.post("/inviteuser/:tenantId", isAuthenticated, validateInviteUserToTenant, checkTenantMember,authorizeTenantRoles("Admin"),inviteUserToTenant);
 
 tenantRouter.post("/acceptinvite/:acceptId", isAuthenticated, validateAcceptInvite, acceptInvite);
 
-tenantRouter.post("/rejectinvite/:tenantId", isAuthenticated, validateRejectInvite, rejectInvite);
+tenantRouter.post("/rejectinvite/:rejectId", isAuthenticated, validateRejectInvite, rejectInvite);
 
-tenantRouter.post("/updateTenantName/:tenantId", isAuthenticated, checkTenantMember,authorizeTenantRoles("Admin"),updateTenantName);
+tenantRouter.put("/updateTenantName/:tenantId", isAuthenticated, checkTenantMember,authorizeTenantRoles("Admin"),updateTenantName);
 
 tenantRouter.put( "/changerole", isAuthenticated, checkTenantMember, authorizeTenantRoles("Admin"), changeMemberRole );
 

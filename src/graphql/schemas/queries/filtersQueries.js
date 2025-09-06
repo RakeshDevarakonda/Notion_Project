@@ -1,5 +1,7 @@
 export const filterQueries=`#graphql
 
+scalar JSON
+scalar MongoID
 
 input TextFilter {
   equals: String
@@ -55,11 +57,9 @@ input MultiSelectFilter {
 input RelationFilter {
   equals: MongoID
   notEquals: MongoID
-  contains: [MongoID]
 }
 
 input FieldFilterInput {
-  fieldId: MongoID
   text: TextFilter
   number: NumberFilter
   date: DateFilter

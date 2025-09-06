@@ -1,4 +1,8 @@
 export const rowQueries = `#graphql
+scalar JSON
+scalar MongoID
+
+
 
 type RowPayload {
   rows: [Row!]!   

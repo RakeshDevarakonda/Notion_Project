@@ -15,8 +15,8 @@ export const rowsResolver = {
 
   Query: {
     getRowByIds: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, {  rowIds, databaseId }) => {
-        const result = await getRowDetails(rowIds, databaseId);
+      async (_, {  rowIds, databaseId ,TenantId}) => {
+        const result = await getRowDetails(rowIds, databaseId,TenantId);
         return result;
       }
     ),
@@ -27,7 +27,7 @@ export const rowsResolver = {
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin", "Editor")
     )(async (_, { input }) => {
-      const result = await createNewRow(input);
+      const result = await createNewRows(input);
       return result;
     }),
 

@@ -1,6 +1,6 @@
 import { Database, Row } from "../../../models/Database.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { processFieldValue } from "../../../utils/validate.js";
+import { getDefaultValue, processFieldValue } from "../../../utils/validate.js";
 
 export const createNewRows = async (input) => {
   const { TenantId, databaseId, rows } = input;
@@ -10,6 +10,7 @@ export const createNewRows = async (input) => {
     Tenant: TenantId,
   });
 
+  if (!database) throwUserInputError("Database not found");
 
   const rowsToInsert = [];
 
@@ -17,15 +18,14 @@ export const createNewRows = async (input) => {
     const rowInput = rows[r];
     const rowValues = [];
 
-    for (let i = 0; i < rowInput.length; i++) {
+    for (let i = 0; i < database.fields.length; i++) {
       const field = database.fields[i];
       if (!field)
         throwUserInputError(`Field not found at index ${i} for row ${r + 1}`);
 
       let value = rowInput[i]?.value;
-
       if (value === undefined || value === null) {
-       throwUserInputError("Value can")
+        value = getDefaultValue(field.type);
       }
 
       value = await processFieldValue(
@@ -45,9 +45,17 @@ export const createNewRows = async (input) => {
     });
   }
 
-  // Insert all rows at once
   const newRows = await Row.insertMany(rowsToInsert);
-  return newRows; // returns array of created rows
+  const payload = newRows.map((row) => ({
+    rowId: row._id,
+    values: row.values.map((v) => ({
+      valueId: v._id,
+      value: v.value,
+      fieldId: v.fieldId,
+    })),
+  }));
+
+  return payload;
 };
 
 export const deleteRowsByIds = async (input) => {
@@ -61,7 +69,7 @@ export const deleteRowsByIds = async (input) => {
   if (existingRows.length !== rowIds.length) {
     const existingIds = existingRows.map((r) => r._id.toString());
     const invalidRowIds = rowIds.filter((id) => !existingIds.includes(id));
-    throwUserInputError(`Rows Not Found: ${invalidRowIds.join(", ")}`);
+    throwUserInputError(`Rows Not Found in db or invalid rowid: ${invalidRowIds.join(", ")}`);
   }
 
   await Row.deleteMany({

@@ -1,6 +1,8 @@
 export const fieldsAndValuesMutation = `#graphql
 
 scalar JSON
+scalar MongoID
+
 
 
 #-----updateValues mutation -----
@@ -42,19 +44,24 @@ input addFieldandValuesInput {
   TenantId: MongoID!
   databaseId: MongoID!
   fields: [FieldInput!]!
-  values: [ValueInput!]
+  values: [RowValuesInput!]
 }
 
 input FieldInput {
   name: String!
-  type: String!    
-  options: [String] 
+  type: String!
+  options: [String]
 }
-  
-input ValueInput {
+
+input RowValuesInput {
   rowId: MongoID!
-  value: JSON!   
+  values: [ValueInput!]!
 }
+
+input ValueInput {
+  value: JSON!
+}
+
 
 #-----createFieldAndValues payload-----
 

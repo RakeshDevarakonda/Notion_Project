@@ -6,8 +6,8 @@ import {
   updateMultipleFields,
 } from "../services/mutations/fieldAndValuesMutaionService.js";
 import {
+  getRelationDatabaseDetailsService,
   getValuesByField,
-  keywordSearchService,
 } from "../services/queries/fieldAndValuesQueryServices.js";
 import {
   authorizeTenantRolesGraphql,
@@ -17,7 +17,6 @@ import {
 
 export const fieldAndValuesResolver = {
   JSON: GraphQLJSON,
-
   Query: {
     getValuesByField: composeMiddlewares(checkTenantMemberGraphql)(
       async (_, { input }) => {
@@ -27,24 +26,14 @@ export const fieldAndValuesResolver = {
     ),
 
     getRelationDatabaseDetails: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, { input }) => {
-        const result = await getRelationDatabaseDetails(input);
-        return result;
-      }
-    ),
-
-    keywordSearch: composeMiddlewares(checkTenantMemberGraphql)(
-      async (
-        _,
-        { TenantId, databaseId, searchByValueName, searchByFieldName },
-        context
-      ) => {
-        const result = await keywordSearchService(
+      async (_, { TenantId, databaseId, valueId, page, limit, sort }) => {
+        const result = await getRelationDatabaseDetailsService(
           TenantId,
           databaseId,
-          searchByValueName,
-          searchByFieldName,
-          context.user
+          valueId,
+          page,
+          limit,
+          sort
         );
         return result;
       }
@@ -54,7 +43,7 @@ export const fieldAndValuesResolver = {
   Mutation: {
     addFieldandValues: composeMiddlewares(
       checkTenantMemberGraphql,
-      authorizeTenantRolesGraphql("Admin")
+      authorizeTenantRolesGraphql("Admin", "Editor")
     )(async (_, { input }) => {
       const result = await addFieldandValues(input);
       return result;
@@ -70,7 +59,6 @@ export const fieldAndValuesResolver = {
 
     editMultipleFields: composeMiddlewares(
       checkTenantMemberGraphql,
-
       authorizeTenantRolesGraphql("Admin", "Editor")
     )(async (_, { input }, context) => {
       const result = await updateMultipleFields(input, context.user);

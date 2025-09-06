@@ -16,7 +16,6 @@ export const createTenant = async (req, res, next) => {
 
     const userId = req.user._id;
 
-    if (!name) return throwError(400, "Tenant name is required");
 
     const userTenants = await Tenant.find({ createdBy: userId });
     const nameExistsInUserTenants = userTenants.some(
@@ -77,7 +76,6 @@ export const inviteUserToTenant = async (req, res, next) => {
     const { tenantId } = req.params;
     validateObjectId(tenantId, "Tenant ID");
     const { email, role } = req.body;
-    const inviterId = req.user._id.toString();
 
     if (!role) {
       throwError(400, "Role is required");
@@ -91,19 +89,7 @@ export const inviteUserToTenant = async (req, res, next) => {
     const tenant = await Tenant.findById(tenantId).populate("createdBy");
     if (!tenant) return throwError(404, "Tenant not found");
 
-    const isMember = tenant.members.some(
-      (m) => m.tenantUserId.toString() === inviterId
-    );
-    if (!isMember)
-      return throwError(403, "You do not have permission to invite users");
 
-    const memberInfo = tenant.members.find(
-      (m) => m.tenantUserId.toString() === inviterId
-    );
-
-    if (memberInfo.role !== "Admin") {
-      return throwError(403, "Only Admins can invite users");
-    }
 
     const userToInvite = await TenantUser.findOne({ email });
     if (!userToInvite) return throwError(404, "User not found");
@@ -204,15 +190,15 @@ export const acceptInvite = async (req, res, next) => {
 
 export const rejectInvite = async (req, res, next) => {
   try {
-    const { rejectid } = req.params;
+    const { rejectId } = req.params;
     const userId = req.user._id.toString();
 
-    validateObjectId(rejectid, "Reject ID");
+    validateObjectId(rejectId, "Reject ID");
 
     const user = await TenantUser.findById(userId);
     if (!user) return throwError(404, "User not found");
 
-    const invite = user.invites.find((inv) => inv._id.toString() === rejectid);
+    const invite = user.invites.find((inv) => inv._id.toString() === rejectId);
     if (!invite) return throwError(403, "No pending invitation found");
 
     if (invite.status === "Accepted")
@@ -250,7 +236,7 @@ export const updateTenantName = async (req, res, next) => {
     const { name } = req.body;
 
     validateObjectId(tenantId, "Tenant ID");
-    if (!name) return throwError(400, "Tenant name is required");
+    if (!name || name.trim() === "") return throwError(400, "Tenant name is required");
 
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) return throwError(404, "Tenant not found");

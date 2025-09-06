@@ -1,6 +1,6 @@
 export const rowsMutation = `#graphql
 scalar JSON
-
+scalar MongoID
 
 
 #----createnewrow mutation-------------------
@@ -8,30 +8,26 @@ scalar JSON
 input CreateRowInput {
   TenantId: MongoID!
   databaseId: MongoID!
-  rows: [[ValueInput!]!]!
+  rows: [[ValueInputData!]!]!
 }
-input ValueInput {
+input ValueInputData {
   value: JSON!
 }
 
 #----createnewrow payload-------------------
 
 
-type Row {
-  _id: MongoID!
-  database: MongoID!
-  Tenant: MongoID!
-  values: [Value!]!
-}
 
 type Value {
-  _id: MongoID!
-  fieldId: MongoID!
+  valueId: MongoID!
   value: JSON!
+  fieldId: MongoID!
 }
 
-
-
+type RowPayload {
+  rowId: MongoID!
+  values: [Value!]!
+}
 
 
 #----DeleteRows mutation-------------------
@@ -55,7 +51,7 @@ type DeleteRowsPayload {
 
 
 type Mutation {
-  createNewRows(input: CreateRowInput!): Row!
+  createNewRows(input: CreateRowInput!): [RowPayload!]!
   deleteRows(input: DeleteRowsInput!): DeleteRowsPayload!
 }
 

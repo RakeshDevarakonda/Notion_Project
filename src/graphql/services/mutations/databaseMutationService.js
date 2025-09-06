@@ -1,9 +1,18 @@
 import { Database, Row } from "../../../models/Database.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { processFieldValue } from "../../../utils/validate.js";
+import { getDefaultValue, processFieldValue } from "../../../utils/validate.js";
 
 export const createDBWithRowsAndValues = async (input, contextUser) => {
   const { name, TenantId, fields, rows } = input;
+
+  const existingDatabase = await Database.findOne({
+    name,
+    Tenant: TenantId,
+  });
+
+  if (existingDatabase) {
+    throwUserInputError("Database with this name already exists");
+  }
 
   const savedDatabase = new Database({
     name,
@@ -11,7 +20,6 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
     Tenant: TenantId,
     createdBy: contextUser._id,
   });
-  await savedDatabase.save();
 
   if (!fields || fields.length === 0 || fields == undefined)
     return { database: savedDatabase, rows: [] };
@@ -25,13 +33,13 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
 
     for (let i = 0; i < savedDatabase.fields.length; i++) {
       const field = savedDatabase.fields[i];
-      let value = r.values[i].value;
+      let value = r.values[i] ? r.values[i].value : undefined;
 
       if (value === undefined || value === null) {
-        throwUserInputError("Value canot be null or undefined");
+        value = getDefaultValue(field.type);
       }
 
-      processFieldValue(
+      await processFieldValue(
         field,
         value,
         savedDatabase.Tenant.toString(),
@@ -47,6 +55,7 @@ export const createDBWithRowsAndValues = async (input, contextUser) => {
       values: valuesArray,
     });
   }
+  await savedDatabase.save();
 
   const savedRows = await Row.insertMany(rowDocs);
 

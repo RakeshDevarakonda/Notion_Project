@@ -1,20 +1,6 @@
 import { Database, Row } from "../../../models/Database.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
-import { processFieldValue } from "../../../utils/validate.js";
-
-const getDefaultValueForFieldType = (field) => {
-  switch (field.type) {
-    case "number":
-    case "boolean":
-      return null; // empty for number/boolean
-    case "multi-select":
-      return []; // empty array for multi-select
-    case "select":
-    case "text":
-    default:
-      return ""; // empty string for select or text
-  }
-};
+import { getDefaultValue, processFieldValue } from "../../../utils/validate.js";
 
 export const addFieldandValues = async (input) => {
   const { databaseId, fields, values } = input;
@@ -31,44 +17,56 @@ export const addFieldandValues = async (input) => {
     return newField;
   });
 
-  await database.save();
-
   const updatedRowIds = [];
 
-  // Handle provided row values
   if (Array.isArray(values) && values.length > 0) {
     const bulkOps = [];
 
-    values.forEach((valObj, index) => {
-      const field = newFields[index];
-      let val = valObj.value;
+    for (const rowInput of values) {
+      const { rowId, values: rowValues } = rowInput;
 
-      if (val === undefined || val === null) {
-        throwUserInputError("Value canot be null or undefined");
+      const row = await Row.findOne({ _id: rowId, database: databaseId });
+      if (!row) throwUserInputError(`Row ${rowId} not found in this database`);
+
+      const updates = [];
+
+      for (let i = 0; i < rowValues.length; i++) {
+        const field = newFields[i];
+        let val = rowValues[i].value;
+
+        val = await processFieldValue(
+          field,
+          val,
+          database.Tenant.toString(),
+          database.createdBy.toString()
+        );
+
+        updates.push({ fieldId: field._id, value: val });
       }
-      val = processFieldValue(
-        field,
-        val,
-        database.Tenant.toString(),
-        database.createdBy.toString()
+
+      const providedFieldIds = updates.map((u) => u.fieldId.toString());
+      const missingFields = newFields.filter(
+        (f) => !providedFieldIds.includes(f._id.toString())
       );
+
+      for (const f of missingFields) {
+        updates.push({ fieldId: f._id, value: getDefaultValue(f.type) });
+      }
 
       bulkOps.push({
         updateOne: {
-          filter: { _id: valObj.rowId },
-          update: {
-            $push: { values: { fieldId: field._id, value: val } },
-          },
+          filter: { _id: rowId },
+          update: { $push: { values: { $each: updates } } },
           upsert: true,
         },
       });
-      updatedRowIds.push(valObj.rowId);
-    });
+
+      updatedRowIds.push(rowId);
+    }
 
     if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
   }
 
-  // Fill defaults for rows not updated
   const allRows = await Row.find({ database: databaseId });
   const remainingRows = allRows.filter(
     (r) => !updatedRowIds.includes(r._id.toString())
@@ -77,20 +75,23 @@ export const addFieldandValues = async (input) => {
   if (remainingRows.length > 0) {
     const bulkOps = [];
     remainingRows.forEach((row) => {
-      newFields.forEach((field) => {
-        const defaultVal = getDefaultValueForFieldType(field);
-        bulkOps.push({
-          updateOne: {
-            filter: { _id: row._id },
-            update: {
-              $push: { values: { fieldId: field._id, value: defaultVal } },
-            },
-          },
-        });
+      const updates = newFields.map((f) => ({
+        fieldId: f._id,
+        value: getDefaultValue(f.type),
+      }));
+
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: row._id },
+          update: { $push: { values: { $each: updates } } },
+        },
       });
     });
+
     if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
   }
+
+  await database.save();
 
   return { newFields, updatedRowIds };
 };
@@ -107,12 +108,25 @@ export const editValueById = async (input) => {
     const { rowId, valueId, newValue } = upd;
 
     const row = await Row.findOne({ _id: rowId, database: databaseId });
-    if (!row) throwUserInputError(`Row ${rowId} not found`);
+    if (!row) throwUserInputError(`Row ${rowId} not found in this database`);
+
+    const valueObj = row.values.id(valueId);
+    if (!valueObj)
+      throwUserInputError(`Value ${valueId} not found in row ${rowId}`);
 
     const field = database.fields.id(valueObj.fieldId);
-    if (!field) throwUserInputError(`Field ${valueObj.fieldId} not found`);
+    if (!field)
+      throwUserInputError(
+        `Field ${valueObj.fieldId} not found in database ${databaseId}`
+      );
 
-    let val = processFieldValue(
+    if (row.Tenant.toString() !== database.Tenant.toString()) {
+      throwUserInputError(
+        `Row ${rowId} does not belong to the same tenant as the database`
+      );
+    }
+
+    let val = await processFieldValue(
       field,
       newValue,
       database.Tenant.toString(),
@@ -143,51 +157,33 @@ export const updateMultipleFields = async (input) => {
 
   for (const upd of updates) {
     const { fieldId, values } = upd;
-
     const field = database.fields.id(fieldId);
-    if (!field) throwUserInputError(`Field ${fieldId} not found`);
+    if (!field)
+      throwUserInputError(`Field ${fieldId} not found in this database`);
 
     const oldType = field.type;
     const newType = values.type;
 
-    if (oldType === newType) {
-      return;
-    }
-
     field.name = values.name;
-    field.type = values.type;
-    if (options || options !== null || options !== undefined) {
-      field.options = values.options;
-    }
+    field.type = newType;
+    field.options = values.options || [];
 
-    // 🔑 If field type changed, normalize values in Row collection
-    const rows = await Row.find({ database: databaseId });
+    if (oldType !== newType) {
+      const rows = await Row.find({ database: databaseId });
 
-    for (const row of rows) {
-      let changed = false;
+      for (const row of rows) {
+        let changed = false;
 
-      row.values.forEach((v) => {
-        if (v.fieldId.toString() === fieldId) {
-          changed = true;
+        for (const v of row.values) {
+          if (v.fieldId.toString() === fieldId) {
+            changed = true;
 
-          switch (newType) {
-            case "number":
-            case "boolean":
-              v.value = null;
-              break;
-            case "multi-select":
-              v.value = [];
-              break;
-            case "select":
-              v.value = "";
-              break;
-            default:
-              v.value = "";
+            v.value = getDefaultValue(newType);
           }
         }
-      });
 
-      if (changed) await row.save();
+        if (changed) await row.save();
+      }
     }
 
     updatedFields.push({

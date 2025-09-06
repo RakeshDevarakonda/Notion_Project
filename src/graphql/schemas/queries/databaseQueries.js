@@ -1,12 +1,15 @@
 export const databaseQueries = `#graphql
 
 scalar JSON
+scalar MongoID
+
 
 type DatabaseDetailsPayload {
   database: Database!
   rows: [Row]!
   page: Int!
   limit: Int!
+  sort:Int!
   totalRows: Int!
 }
 
@@ -45,7 +48,7 @@ type Value {
 
 
 type Query {
-  getFullDatabaseDetails(TenantId: MongoID!, databaseId: MongoID!,page: Int, limit: Int): DatabaseDetailsPayload!
+  getFullDatabaseDetails(TenantId: MongoID!, databaseId: MongoID!,page: Int, limit: Int,sort:Int): DatabaseDetailsPayload!
 }
 
 `;

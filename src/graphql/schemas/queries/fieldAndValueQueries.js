@@ -1,6 +1,6 @@
 export const fieldAndValueQueries = `#graphql
 scalar JSON
-
+scalar MongoID
 
 #---getValuesByField mutation---
 
@@ -42,24 +42,6 @@ type Value {
 }
 
 
-#---keywordSearch payload---
-
-
-type SearchResponse {
-  count: Int!
-  searchByValueName:String
-  searchByFieldName:String
-  results: [SearchResult!]!
-}
-
-
-type SearchResult {
-  rowId: MongoID!
-  value: String!
-  field: Field!
-
-  # Field provided at top
-}
 
 
 
@@ -95,8 +77,8 @@ type Value {
 
 type Query {
   getValuesByField(input: GetValuesByFieldInput): FieldPayload!
-  keywordSearch( TenantId: MongoID! databaseId: MongoID! searchByValueName: String, searchByFieldName: String): SearchResponse!
- getRelationDatabaseDetails(valueId: MongoID!, page: Int, limit: Int): RelationDatabase!
+ getRelationDatabaseDetails(sort:Int,  TenantId: MongoID!
+  databaseId: MongoID!,valueId: MongoID!, page: Int, limit: Int): RelationDatabase!
 
 
 }

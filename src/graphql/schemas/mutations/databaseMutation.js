@@ -111,7 +111,7 @@ type updateDatabasePayload {
 
 
 type Mutation {
-  createDatabase(input: CreateDatabaseInput): CreateDatabasePayload
+  createDatabase(input: CreateDatabaseInput): CreateDatabasePayload!
   deleteDatabases(input: DeleteDatabasesInput!): DeleteDatabasesPayload!
   updateDatabaseName(input: updateDatabaseInput!): updateDatabasePayload!
 

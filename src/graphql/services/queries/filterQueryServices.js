@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dayjs from "dayjs";
-import { Row } from "../../../models/Database.js";
+import { Database, Row } from "../../../models/Database.js";
+import { throwUserInputError } from "../../../utils/throwError.js";
 
 const isValid = (val) => val !== undefined && val !== null;
 
@@ -10,15 +11,11 @@ export const getFilteredRows = async (input) => {
   const query = { database: databaseId, Tenant: TenantId };
   const andConditions = [];
 
-  const wrapCond = (fieldId, cond) => {
-    return fieldId
-      ? { values: { $elemMatch: { fieldId, ...cond } } }
-      : { values: { $elemMatch: { ...cond } } };
+  const wrapCond = (cond) => {
+    return { values: { $elemMatch: { ...cond } } };
   };
 
   for (const filter of filters) {
-    const fieldId = isValid(filter.fieldId) ? filter.fieldId : undefined;
-
     if (filter.text) {
       const f = filter.text;
       const orCond = [];
@@ -29,16 +26,15 @@ export const getFilteredRows = async (input) => {
         orCond.push({ value: { $regex: `^${f.startsWith}`, $options: "i" } });
       if (isValid(f.endsWith))
         orCond.push({ value: { $regex: `${f.endsWith}$`, $options: "i" } });
-      if (orCond.length) andConditions.push(wrapCond(fieldId, { $or: orCond }));
+      if (orCond.length) andConditions.push(wrapCond({ $or: orCond }));
       if (isValid(f.notEquals))
-        andConditions.push(wrapCond(fieldId, { value: { $ne: f.notEquals } }));
+        andConditions.push(wrapCond({ value: { $ne: f.notEquals } }));
       if (isValid(f.notContains))
         andConditions.push(
-          wrapCond(fieldId, { value: { $not: new RegExp(f.notContains, "i") } })
+          wrapCond({ value: { $not: new RegExp(f.notContains, "i") } })
         );
     }
 
-    // NUMBER FILTER
     if (filter.number) {
       const f = filter.number;
       const cond = {};
@@ -50,92 +46,72 @@ export const getFilteredRows = async (input) => {
       if (isValid(f.lte)) cond.$lte = f.lte;
       if (f.between?.length === 2)
         (cond.$gte = f.between[0]), (cond.$lte = f.between[1]);
-      if (Object.keys(cond).length) andConditions.push(wrapCond(fieldId, cond));
+      if (Object.keys(cond).length)
+        andConditions.push(wrapCond({ value: cond }));
     }
 
-    // BOOLEAN FILTER
     if (isValid(filter.boolean?.equals)) {
-      andConditions.push(wrapCond(fieldId, { value: filter.boolean.equals }));
+      andConditions.push(wrapCond({ value: filter.boolean.equals }));
     }
 
-    // SELECT FILTER
     if (filter.select) {
       const f = filter.select;
-      if (isValid(f.equals))
-        andConditions.push(wrapCond(fieldId, { value: f.equals }));
+      if (isValid(f.equals)) andConditions.push(wrapCond({ value: f.equals }));
       if (isValid(f.notEquals))
-        andConditions.push(wrapCond(fieldId, { value: { $ne: f.notEquals } }));
+        andConditions.push(wrapCond({ value: { $ne: f.notEquals } }));
     }
 
-    // MULTISELECT FILTER
     if (filter.multiSelect) {
       const f = filter.multiSelect;
       if (f.contains?.length)
-        andConditions.push(wrapCond(fieldId, { value: { $in: f.contains } }));
+        andConditions.push(wrapCond({ value: { $in: f.contains } }));
       if (f.notContains?.length)
-        andConditions.push(
-          wrapCond(fieldId, { value: { $nin: f.notContains } })
-        );
+        andConditions.push(wrapCond({ value: { $nin: f.notContains } }));
       if (f.containsAll?.length) {
         andConditions.push({
           values: {
             $all: f.containsAll.map((v) => ({
-              $elemMatch: { fieldId, value: v },
+              $elemMatch: { value: v },
             })),
           },
         });
       }
     }
 
-    // RELATION FILTER
     if (filter.relation) {
       const f = filter.relation;
 
-      // Check equals
+      if (!mongoose.Types.ObjectId.isValid(f.equals)) {
+        throwUserInputError(`Invalid ObjectId: ${f.equals}`);
+      }
+
       if (isValid(f.equals)) {
-       
-        const exists = await RelatedModel.exists({ _id: f.equals });
-        if (!exists) throw new Error(`Relation ID ${f.equals} not found in DB`);
-
-        andConditions.push(
-          wrapCond(fieldId, { value: new mongoose.Types.ObjectId(f.equals) })
-        );
-      }
-
-      // Check notEquals
-      if (isValid(f.notEquals)) {
-
-        const exists = await RelatedModel.exists({ _id: f.notEquals });
+        const exists = await Database.exists({
+          _id: new mongoose.Types.ObjectId(f.equals),
+        });
         if (!exists)
-          throw new Error(`Relation ID ${f.notEquals} not found in DB`);
+          throwUserInputError(`Relation ID ${f.equals} not found in DB`);
 
         andConditions.push(
-          wrapCond(fieldId, {
-            value: { $ne: new mongoose.Types.ObjectId(f.notEquals) },
-          })
+          wrapCond({ value: new mongoose.Types.ObjectId(f.equals) })
         );
       }
 
-      // Check contains (array of IDs)
-      if (f.contains?.length) {
-        const existingIds = await RelatedModel.find({
-          _id: { $in: f.contains },
-        }).distinct("_id");
-        const missingIds = f.contains.filter((id) => !existingIds.includes(id));
-        if (missingIds.length)
-          throw new Error(`Relation IDs not found: ${missingIds.join(", ")}`);
+      if (isValid(f.notEquals)) {
+        const exists = await Database.exists({
+          _id: new mongoose.Types.ObjectId(f.equals),
+        });
+        if (!exists)
+          throwUserInputError(`Relation ID ${f.notEquals} not found in DB`);
 
         andConditions.push(
-          wrapCond(fieldId, {
-            value: {
-              $in: f.contains.map((id) => new mongoose.Types.ObjectId(id)),
-            },
+          wrapCond({
+            value: { $ne: new mongoose.Types.ObjectId(f.notEquals) },
           })
         );
       }
     }
 
-    // DATE FILTER
     if (filter.date) {
       const f = filter.date;
       const cond = {};
@@ -155,11 +131,13 @@ export const getFilteredRows = async (input) => {
       if (f.tomorrow)
         (cond.$gte = today.add(1, "day").toDate()),
           (cond.$lt = today.add(2, "day").toDate());
-      if (Object.keys(cond).length) andConditions.push(wrapCond(fieldId, cond));
+      if (Object.keys(cond).length) andConditions.push(wrapCond(cond));
     }
   }
 
   if (andConditions.length) query.$and = andConditions;
+
+  console.log(andConditions);
 
   const skip = (Number(page) - 1) * Number(limit);
 

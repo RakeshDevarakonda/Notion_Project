@@ -16,8 +16,8 @@ export const databaseResolver = {
 
   Query: {
     getFullDatabaseDetails: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, { databaseId, page, limit }) => {
-        const result = await getDatabaseDetails(databaseId, page, limit);
+      async (_, { databaseId, page, limit,sort },context) => {
+        const result = await getDatabaseDetails(databaseId, page, limit,sort,context.databasedetails);
         return result;
       }
     ),

@@ -1,6 +1,10 @@
 import { body, param } from "express-validator";
 import { throwError, throwUserInputError } from "./throwError.js";
+import { GraphQLScalarType, Kind } from "graphql";
 import mongoose from "mongoose";
+
+import { ObjectId } from "mongodb";
+import { Database } from "../models/Database.js";
 
 export const registerValidation = [
   body("name").notEmpty().withMessage("Name is required"),
@@ -54,10 +58,23 @@ export const processFieldValue = async (
 ) => {
   const { name, options } = field;
   switch (field.type) {
+    case "string":
+      if (value == "") {
+        return value;
+      }
+      if (typeof value !== "string") {
+        throwUserInputError(
+          `required type : ${field.type}, Invalid string for field "${name}"`
+        );
+      }
+      return value;
+
     case "number":
       value = Number(value);
       if (isNaN(value))
-        throwUserInputError(`Invalid number for field "${name}"`);
+        throwUserInputError(
+          `required type : ${field.type}, Invalid number for field "${name}"`
+        );
       return value;
 
     case "boolean":
@@ -65,12 +82,18 @@ export const processFieldValue = async (
       const valStr = value.toString().trim();
       if (valStr === "true") return true;
       if (valStr === "false") return false;
-      throwUserInputError(`Invalid boolean for field "${name}"`);
+      throwUserInputError(
+        `required type : ${field.type}, Invalid boolean for field "${name}"`
+      );
 
     case "multi-select":
+      if (value == [] && value.length === 0) {
+        return value;
+      }
+
       if (!Array.isArray(value)) {
         throwUserInputError(
-          `Invalid value for multi-select field "${name}": must be an array of options`
+          `required type : Array,  Invalid value for multi-select field "${name}": must be an array of options`
         );
       }
 
@@ -94,9 +117,13 @@ export const processFieldValue = async (
       return value;
 
     case "select":
+      if (value == "") {
+        return value;
+      }
+
       if (!options.includes(value)) {
         throwUserInputError(
-          `Invalid select option "${value}" for field "${name}"`
+          `required type string, Invalid select option "${value}" for field "${name}"`
         );
       }
 
@@ -111,6 +138,9 @@ export const processFieldValue = async (
       return value;
 
     case "date":
+      if (value == "") {
+        return value;
+      }
       if (typeof value !== "string") {
         throwUserInputError(
           `Date must be a string in YYYY-MM-DD format for field "${name}"`
@@ -131,6 +161,9 @@ export const processFieldValue = async (
       return dateObj;
 
     case "relation":
+      if (value == "") {
+        return value;
+      }
       if (!mongoose.Types.ObjectId.isValid(value)) {
         throwUserInputError(`Invalid ObjectId for relation field "${name}"`);
       }
@@ -150,7 +183,28 @@ export const processFieldValue = async (
 
     default:
       throwUserInputError(
-        `Unsupported field type "${fieldtype}" for field "${name}"`
+        `Unsupported field type "${field.type}" for field "${name}"`
       );
+  }
+};
+
+export const getDefaultValue = (type) => {
+  switch (type) {
+    case "string":
+      return "";
+    case "number":
+      return 0;
+    case "boolean":
+      return false;
+    case "select":
+      return "";
+    case "multi-select":
+      return [];
+    case "relation":
+      return "";
+    case "date":
+      return "";
+    default:
+      return "";
   }
 };

@@ -94,10 +94,12 @@ export const checkTenantMemberGraphql = (resolverFn) => {
       if (database.Tenant.toString() !== TenantId) {
         throwUserInputError("Database does not belong to this tenant");
       }
+      context.databasedetails=database;
     }
 
     context.tenantDetails = tenantDetails;
-    context.member = member;
+    context.memberdetails = member;
+
 
     return resolverFn(parent, args, context, info);
   };
@@ -106,7 +108,7 @@ export const checkTenantMemberGraphql = (resolverFn) => {
 export const authorizeTenantRolesGraphql = (...allowedRoles) => {
   return (resolverFn) => {
     return async (parent, args, context, info) => {
-      if (!allowedRoles.includes(member.role)) {
+      if (!allowedRoles.includes(context.memberdetails.role)) {
         throwUserInputError(
           `Access denied: Only roles [${allowedRoles.join(
             ", "

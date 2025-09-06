@@ -8,13 +8,14 @@ export const getRowDetails = async (rowIds, databaseId, TenantId) => {
     Tenant: TenantId,
   });
 
+
   if (rows.length !== rowIds.length) {
     const foundRowIds = rows.map((row) => row._id.toString());
     const notFoundRowIds = rowIds.filter(
       (rowId) => !foundRowIds.includes(rowId)
     );
     if (notFoundRowIds.length > 0) {
-      throwUserInputError(`Rows with IDs ${notFoundRowIds.join(", ")} not found`);
+      throwUserInputError(`Invalid Rows or these rows not found in this db ${notFoundRowIds.join(", ")} `);
     }
   }
 
