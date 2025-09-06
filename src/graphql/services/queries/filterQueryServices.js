@@ -6,9 +6,20 @@ import { throwUserInputError } from "../../../utils/throwError.js";
 const isValid = (val) => val !== undefined && val !== null;
 
 export const getFilteredRows = async (input) => {
-  const { databaseId, TenantId, filters = [], page = 1, limit = 10 } = input;
+  const {
+    databaseId,
+    TenantId,
+    filters = [],
+    page = 1,
+    limit = 10,
+    sort = -1,
+    showfields,
+  } = input;
 
-  const query = { database: databaseId, Tenant: TenantId };
+  const query = {
+    database: new mongoose.Types.ObjectId(databaseId),
+    Tenant: new mongoose.Types.ObjectId(TenantId),
+  };
   const andConditions = [];
 
   const wrapCond = (cond) => {
@@ -137,14 +148,48 @@ export const getFilteredRows = async (input) => {
 
   if (andConditions.length) query.$and = andConditions;
 
-  console.log(andConditions);
-
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [rows, totalRows] = await Promise.all([
-    Row.find(query).skip(skip).limit(Number(limit)).lean(),
-    Row.countDocuments(query),
-  ]);
+  let sortObj = { updatedAt: sort };
 
-  return { rows, page: Number(page), limit: Number(limit), totalRows };
+  if (showfields) {
+    const fieldIds = showfields.map((id) => new mongoose.Types.ObjectId(id));
+
+    const aggregationPipeline = [
+      { $match: query },
+
+      { $unwind: "$values" },
+
+      {
+        $match: {
+          "values.fieldId": { $in: fieldIds },
+        },
+      },
+
+      {
+        $group: {
+          _id: "$_id",
+          database: { $first: "$database" },
+          Tenant: { $first: "$Tenant" },
+          values: { $push: "$values" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+        },
+      },
+    ];
+
+    const [rows, totalRows] = await Promise.all([
+      Row.aggregate(aggregationPipeline),
+      Row.countDocuments(query),
+    ]);
+
+    return {showfields, sort, rows, page: Number(page), limit: Number(limit), totalRows };
+  } else {
+    const [rows, totalRows] = await Promise.all([
+      Row.find(query).sort(sortObj).skip(skip).limit(Number(limit)).lean(),
+      Row.countDocuments(query),
+    ]);
+
+    return { showfields,sort, rows, page: Number(page), limit: Number(limit), totalRows };
+  }
 };

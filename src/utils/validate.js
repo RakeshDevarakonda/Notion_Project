@@ -80,8 +80,8 @@ export const processFieldValue = async (
     case "boolean":
       if (typeof value === "boolean") return value;
       const valStr = value.toString().trim();
-      if (valStr === "true") return true;
-      if (valStr === "false") return false;
+      // if (valStr === "true") return true;
+      // if (valStr === "false") return false;
       throwUserInputError(
         `required type : ${field.type}, Invalid boolean for field "${name}"`
       );

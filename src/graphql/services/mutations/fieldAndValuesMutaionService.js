@@ -120,11 +120,6 @@ export const editValueById = async (input) => {
         `Field ${valueObj.fieldId} not found in database ${databaseId}`
       );
 
-    if (row.Tenant.toString() !== database.Tenant.toString()) {
-      throwUserInputError(
-        `Row ${rowId} does not belong to the same tenant as the database`
-      );
-    }
 
     let val = await processFieldValue(
       field,
@@ -144,6 +139,8 @@ export const editValueById = async (input) => {
   }
 
   if (bulkOps.length > 0) await Row.bulkWrite(bulkOps);
+
+  console.log(updatedRows)
 
   return { updatedRows };
 };

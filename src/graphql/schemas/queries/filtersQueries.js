@@ -1,4 +1,4 @@
-export const filterQueries=`#graphql
+export const filterQueries = `#graphql
 
 scalar JSON
 scalar MongoID
@@ -72,16 +72,20 @@ input FieldFilterInput {
 input RowFilterInput {
   databaseId: MongoID!
   TenantId: MongoID!
+  showfields: [MongoID!]
   filters: [FieldFilterInput!]!
   page: Int
   limit: Int
+  sort: Int
 }
 
 type RowPagination {
   page: Int!
   limit: Int!
+  sort: Int!
   totalRows: Int!
   rows: [Row!]!
+  showfields: [MongoID!]
 }
 
 type Row {
@@ -103,4 +107,4 @@ type Query {
 
 
 
-`
+`;

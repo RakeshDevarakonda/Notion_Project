@@ -26,16 +26,13 @@ type UpdateValuesPayload {
 }
 
 type UpdatedRow {
-  _id: MongoID!
-  database: MongoID!
-  values: [Value!]!
-}
-
-type Value {
-  _id: MongoID!
+  rowId: MongoID!
+  valueId: MongoID!
   fieldId: MongoID!
   value: JSON!
 }
+
+
 
 #-----createFieldAndValues mutation-----
 
