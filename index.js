@@ -35,6 +35,8 @@ const server = new ApolloServer({
   context
 });
 
+
+
 await server.start();
 
 server.applyMiddleware({ app, path: "/graphql" });
@@ -47,3 +49,6 @@ app.listen(PORT, () => {
     `🚀 GraphQL endpoint available at http://localhost:${PORT}/graphql`
   );
 });
+
+
+// https://vscode.dev/profile/github/b2943665c3ca3bb5ef9fee0195d22c48
