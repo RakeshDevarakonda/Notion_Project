@@ -3,12 +3,16 @@ import { Row, Database } from "../../../models/Database.js";
 import { throwUserInputError } from "../../../utils/throwError.js";
 
 export const getValuesByField = async (input) => {
-  const { databaseId, fieldId, page = 1, limit = 10, sort = -1 } = input;
+  const {
+    databaseId,
+    fieldId,
+    page = 1,
+    limit = 10,
+    descending = true,
+  } = input;
 
-  if (page <= 0 || limit <= 0 || (sort !== 1 && sort !== -1)) {
-    throwUserInputError(
-      "Invalid input: page and limit must be greater than 0, sort must be 1 or -1"
-    );
+  if (page <= 0 || limit <= 0) {
+    throwUserInputError("Invalid input: page and limit must be greater than 0");
   }
 
   const database = await Database.findById(databaseId);
@@ -21,7 +25,6 @@ export const getValuesByField = async (input) => {
   const totalValuesCount = await Row.countDocuments({ database: databaseId });
 
   const rows = await Row.find({ database: databaseId })
-    .sort({ updatedAt: sort })
     .skip((page - 1) * limit)
     .limit(limit);
 
@@ -38,11 +41,21 @@ export const getValuesByField = async (input) => {
     });
   });
 
+  values.sort((a, b) => {
+    console.log(a);
+    if (typeof a.value === "string" && typeof b.value === "string") {
+      return descending
+        ? b.value.localeCompare(a.value)
+        : a.value.localeCompare(b.value);
+    }
+    return descending ? b.value - a.value : a.value - b.value;
+  });
+
   return {
     values,
     page,
     field,
-    sort,
+    descending,
     limit,
     totalValuesCount,
   };

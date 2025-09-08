@@ -48,11 +48,44 @@ type DeleteRowsPayload {
   deletedRowIds: [MongoID!]!
 }
 
+#----updateRow mutation-------------------
+
+
+input UpdateRowInput {
+  databaseId: MongoID!
+  TenantId: MongoID!
+  rowId: MongoID!
+  updates: [UpdateFieldInpudata!]!
+}
+
+input UpdateFieldInpudata {
+  fieldId: MongoID!
+  newValue: JSON!
+}
+
+#----updateRow payload-------------------
+
+
+type UpdateRowPayload {
+  rowId: MongoID!
+  values: [UpdatedValue!]!
+}
+
+type UpdatedValue {
+  valueId: MongoID!
+  fieldId: MongoID!
+  value: JSON!
+}
+
+
+
+
 
 
 type Mutation {
   createNewRows(input: CreateRowInput!): [RowPayload!]!
   deleteRows(input: DeleteRowsInput!): DeleteRowsPayload!
+  updateRow(input: UpdateRowInput!): UpdateRowPayload!
 }
 
 

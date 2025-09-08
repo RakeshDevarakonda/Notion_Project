@@ -2,6 +2,7 @@ import GraphQLJSON from "graphql-type-json";
 import {
   createNewRows,
   deleteRowsByIds,
+  updateRowDetails,
 } from "../services/mutations/rowsMutaionService.js";
 import { getRowDetails } from "../services/Queries/rowQueryService.js";
 import {
@@ -15,8 +16,8 @@ export const rowsResolver = {
 
   Query: {
     getRowByIds: composeMiddlewares(checkTenantMemberGraphql)(
-      async (_, {  rowIds, databaseId ,TenantId}) => {
-        const result = await getRowDetails(rowIds, databaseId,TenantId);
+      async (_, { rowIds, databaseId, TenantId }) => {
+        const result = await getRowDetails(rowIds, databaseId, TenantId);
         return result;
       }
     ),
@@ -34,8 +35,16 @@ export const rowsResolver = {
     deleteRows: composeMiddlewares(
       checkTenantMemberGraphql,
       authorizeTenantRolesGraphql("Admin")
-    )(async (_, { input }, context) => {
+    )(async (_, { input }) => {
       const result = await deleteRowsByIds(input);
+      return result;
+    }),
+
+    updateRow: composeMiddlewares(
+      checkTenantMemberGraphql,
+      authorizeTenantRolesGraphql("Admin","Editor")
+    )(async (_, { input }) => {
+      const result = await updateRowDetails(input);
       return result;
     }),
   },

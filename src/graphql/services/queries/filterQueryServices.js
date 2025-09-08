@@ -65,6 +65,12 @@ export const getFilteredRows = async (input) => {
       andConditions.push(wrapCond({ value: filter.boolean.equals }));
     }
 
+    if (isValid(filter.boolean?.notEquals)) {
+      andConditions.push(
+        wrapCond({ value: { $ne: filter.boolean.notEquals } })
+      );
+    }
+
     if (filter.select) {
       const f = filter.select;
       if (isValid(f.equals)) andConditions.push(wrapCond({ value: f.equals }));
@@ -183,13 +189,27 @@ export const getFilteredRows = async (input) => {
       Row.countDocuments(query),
     ]);
 
-    return {showfields, sort, rows, page: Number(page), limit: Number(limit), totalRows };
+    return {
+      showfields,
+      sort,
+      rows,
+      page: Number(page),
+      limit: Number(limit),
+      totalRows,
+    };
   } else {
     const [rows, totalRows] = await Promise.all([
       Row.find(query).sort(sortObj).skip(skip).limit(Number(limit)).lean(),
       Row.countDocuments(query),
     ]);
 
-    return { showfields,sort, rows, page: Number(page), limit: Number(limit), totalRows };
+    return {
+      showfields,
+      sort,
+      rows,
+      page: Number(page),
+      limit: Number(limit),
+      totalRows,
+    };
   }
 };

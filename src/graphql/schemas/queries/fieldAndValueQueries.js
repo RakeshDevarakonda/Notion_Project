@@ -10,19 +10,17 @@ input GetValuesByFieldInput {
   fieldId: MongoID!
   page: Int
   limit: Int
-  sort:Int
+  descending: Boolean
 }
 
 
 #---getValuesByField payload---
 
-
-
 type FieldPayload {
   page: Int!
   limit: Int!
   totalValuesCount: Int!
-  sort:Int!
+  descending: Boolean!
   field: Field!
   values: [Value!]!
   }

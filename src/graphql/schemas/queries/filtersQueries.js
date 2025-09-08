@@ -41,6 +41,7 @@ input DateFilter {
 
 input BooleanFilter {
   equals: Boolean
+  notEquals: Boolean
 }
 
 input SelectFilter {

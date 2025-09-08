@@ -1,9 +1,7 @@
 import { body, param } from "express-validator";
 import { throwError, throwUserInputError } from "./throwError.js";
-import { GraphQLScalarType, Kind } from "graphql";
 import mongoose from "mongoose";
 
-import { ObjectId } from "mongodb";
 import { Database } from "../models/Database.js";
 
 export const registerValidation = [
@@ -64,7 +62,7 @@ export const processFieldValue = async (
       }
       if (typeof value !== "string") {
         throwUserInputError(
-          `required type : ${field.type}, Invalid string for field "${name}"`
+          `required type : ${field.type} but got ${typeof value}, Invalid string for field "${name}"`
         );
       }
       return value;
@@ -73,7 +71,7 @@ export const processFieldValue = async (
       value = Number(value);
       if (isNaN(value))
         throwUserInputError(
-          `required type : ${field.type}, Invalid number for field "${name}"`
+          `required type : ${field.type} but got ${typeof value}, Invalid number for field "${name}"`
         );
       return value;
 
@@ -83,7 +81,7 @@ export const processFieldValue = async (
       // if (valStr === "true") return true;
       // if (valStr === "false") return false;
       throwUserInputError(
-        `required type : ${field.type}, Invalid boolean for field "${name}"`
+        `required type : ${field.type} but got ${typeof value}, Invalid boolean for field "${name}"`
       );
 
     case "multi-select":

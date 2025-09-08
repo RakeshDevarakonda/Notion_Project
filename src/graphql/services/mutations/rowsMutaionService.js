@@ -69,7 +69,9 @@ export const deleteRowsByIds = async (input) => {
   if (existingRows.length !== rowIds.length) {
     const existingIds = existingRows.map((r) => r._id.toString());
     const invalidRowIds = rowIds.filter((id) => !existingIds.includes(id));
-    throwUserInputError(`Rows Not Found in db or invalid rowid: ${invalidRowIds.join(", ")}`);
+    throwUserInputError(
+      `Rows Not Found in db or invalid rowid: ${invalidRowIds.join(", ")}`
+    );
   }
 
   await Row.deleteMany({
@@ -78,4 +80,58 @@ export const deleteRowsByIds = async (input) => {
   });
 
   return { success: true, deletedRowIds: rowIds };
+};
+
+export const updateRowDetails = async (input) => {
+  const { databaseId, rowId, updates } = input;
+
+  const database = await Database.findById(databaseId);
+
+  const row = await Row.findOne({ _id: rowId, database: databaseId });
+  if (!row) throwUserInputError(`Row ${rowId} not found in this database`);
+
+  const bulkOps = [];
+  const updatedValues = [];
+
+  for (const update of updates) {
+    const { fieldId, newValue } = update;
+
+    const field = database.fields.id(fieldId);
+
+    const valueObj = row.values.find(
+      (val) => val.fieldId.toString() === fieldId
+    );
+
+    if (!valueObj) {
+      throwUserInputError(
+        `Value for field ${fieldId} not found in row ${rowId}`
+      );
+    }
+
+    let val = await processFieldValue(
+      field,
+      newValue,
+      database.Tenant.toString(),
+      database.createdBy.toString()
+    );
+
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: rowId, "values.fieldId": fieldId },
+        update: { $set: { "values.$.value": val } },
+      },
+    });
+    updatedValues.push({
+      valueId: valueObj._id,
+      fieldId: field._id,
+      value: val,
+    });
+  }
+
+  if (bulkOps.length > 0) {
+    console.log(bulkOps)
+    await Row.bulkWrite(bulkOps);
+  }
+
+  return { rowId, values: updatedValues };
 };
