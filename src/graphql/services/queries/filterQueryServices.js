@@ -5,7 +5,7 @@ import { throwUserInputError } from "../../../utils/throwError.js";
 
 const isValid = (val) => val !== undefined && val !== null;
 
-export const getFilteredRows = async (input) => {
+export const getFilteredRows = async (input, databasedetails) => {
   const {
     databaseId,
     TenantId,
@@ -160,6 +160,29 @@ export const getFilteredRows = async (input) => {
 
   if (showfields) {
     const fieldIds = showfields.map((id) => new mongoose.Types.ObjectId(id));
+
+    // check fieldids are valid mongoid or not
+    const invalidMongoIds = fieldIds.filter(
+      (fieldId) => !mongoose.Types.ObjectId.isValid(fieldId)
+    );
+    if (invalidMongoIds.length > 0) {
+      throwUserInputError(
+        `Invalid MongoDB ObjectId format for field IDs: ${invalidMongoIds.join(
+          ", "
+        )}`
+      );
+    }
+
+    const invalidFieldIds = fieldIds.filter(
+      (fieldId) =>
+        !databasedetails.fields.some((field) => field._id.equals(fieldId))
+    );
+
+    if (invalidFieldIds.length > 0) {
+      throwUserInputError(
+        `Invalid field IDs provided: ${invalidFieldIds.join(", ")}`
+      );
+    }
 
     const aggregationPipeline = [
       { $match: query },
